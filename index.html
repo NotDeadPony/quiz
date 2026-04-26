@@ -829,17 +829,3 @@ window.adminReset = async()=>{
 </script>
 </body>
 </html>
-
-    listen(); return;
-  }
-  const sid=sessionStorage.getItem('qid'), sn=sessionStorage.getItem('qname');
-  if(sid&&sn){
-    myId=sid; myName=sn;
-    const snap=await get(ref(db,`quiz/players/${myId}`));
-    if(snap.exists()){ myScore=snap.val().score||0; Object.assign(myLog,snap.val().answers||{}); }
-    hud(); show('waiting'); listen();
-  }
-})();
-</script>
-</body>
-</html>
