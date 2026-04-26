@@ -281,6 +281,26 @@
     .adm-next  { background:var(--cyan); color:#07091A; }
     .adm-reset { background:transparent; border:1px solid var(--red); color:var(--red); }
 
+    .time-ctrl { display:flex; align-items:center; gap:5px; }
+    .time-btn {
+      background:var(--surf); border:1px solid var(--brd); border-radius:8px;
+      color:var(--txt); font-family:'Nunito',sans-serif; font-size:.78rem; font-weight:800;
+      padding:5px 7px; cursor:pointer; transition:background .15s; flex-shrink:0;
+    }
+    .time-btn:hover { background:var(--surf2); border-color:var(--cyan); }
+    .time-val {
+      flex:1; text-align:center; background:var(--surf2); border:1px solid var(--brd);
+      border-radius:8px; padding:5px 0;
+      font-family:'Bebas Neue',cursive; font-size:1.3rem; color:var(--cyan);
+    }
+
+    .dist-row { display:flex; align-items:center; gap:6px; margin-bottom:6px; font-size:.78rem; }
+    .dist-ltr  { width:14px; font-family:'Bebas Neue',cursive; font-size:.95rem; color:var(--dim); flex-shrink:0; }
+    .dist-bwrap{ flex:1; height:9px; background:var(--surf); border-radius:5px; overflow:hidden; }
+    .dist-bar  { height:100%; border-radius:5px; background:var(--cyan); transition:width .5s ease; min-width:0; }
+    .dist-bar.ok { background:var(--grn); }
+    .dist-cnt  { width:20px; text-align:right; color:var(--txt); font-weight:700; font-size:.8rem; flex-shrink:0; }
+
     @media(max-width:430px){
       .ans-grid { grid-template-columns:1fr; }
       #adm { width:calc(100% - 28px); }
@@ -296,7 +316,6 @@
 <!-- ══ JOIN ══ -->
 <div class="screen active" id="screen-join">
   <div class="logo">IT КВІЗ</div>
-  <div class="tagline">Коледж ІСТ КНЕУ • День спеціальності</div>
   <div class="card">
     <label class="field-label">Твоє ім'я</label>
     <input type="text" id="inp-name" placeholder="Введи своє ім'я..." maxlength="20" autocomplete="off">
@@ -403,9 +422,31 @@
   <div class="adm-stat">Учасники <span id="adm-pl">0</span></div>
   <div class="adm-stat">Статус   <span id="adm-st">—</span></div>
   <div class="adm-stat">Питання  <span id="adm-qi">—</span></div>
+
+  <!-- Time control -->
+  <hr class="adm-hr">
+  <div style="font-size:.7rem;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Час на питання</div>
+  <div class="time-ctrl">
+    <button class="time-btn" onclick="changeTime(-5)">−5</button>
+    <button class="time-btn" onclick="changeTime(-1)">−</button>
+    <div class="time-val"><span id="adm-time">20</span><span style="font-size:.7rem;color:var(--dim);margin-left:3px">с</span></div>
+    <button class="time-btn" onclick="changeTime(1)">+</button>
+    <button class="time-btn" onclick="changeTime(5)">+5</button>
+  </div>
+
+  <!-- Answer distribution (visible during active question) -->
+  <div id="adm-dist-wrap" style="display:none">
+    <hr class="adm-hr">
+    <div style="font-size:.7rem;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Відповіді гравців</div>
+    <div id="adm-dist"></div>
+    <div style="font-size:.7rem;color:var(--dim);margin-top:6px">Відповіло: <span id="adm-answered">0</span> / <span id="adm-total">0</span></div>
+  </div>
+
+  <!-- Live leaderboard -->
   <hr class="adm-hr">
   <div style="font-size:.7rem;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Live рейтинг</div>
   <div class="adm-lb" id="adm-lb"></div>
+
   <hr class="adm-hr">
   <button class="adm-btn adm-start" id="adm-start" onclick="adminStart()">▶ ПОЧАТИ КВІЗ</button>
   <button class="adm-btn adm-next"  id="adm-next"  onclick="adminNext()" style="display:none">⏭ ДАЛІ</button>
@@ -442,7 +483,8 @@ const Q = [
   { text:"📦 Керує командою розробників, стежить за термінами та спілкується із замовником",
     a:["QA-інженер","Project Manager / Scrum Master","DBA","System Admin"], c:1 }
 ];
-const TIME = 20; // секунд на питання
+const DEFAULT_TIME = 20; // секунд (за замовчуванням)
+let TIME = DEFAULT_TIME; // оновлюється із стану Firebase
 
 // ─────────────────────────────────────────────
 // 🔥 FIREBASE CONFIG — ЗАМІНИТИ! (README.md)
@@ -469,8 +511,15 @@ const M = ['🥇','🥈','🥉'];
 const isAdmin = new URLSearchParams(location.search).has('admin');
 
 let myId  = null, myName = '', myScore = 0;
-let myAns = null, myLog  = {};   // { q0:{answer,correct}, ... }
+let myAns = null, myLog  = {};
 let tmrIv = null, qstate = null;
+let lastRenderedQ = -1;
+let adminTime = DEFAULT_TIME; // локальний стан адміна для налаштування часу
+
+window.changeTime = (delta) => {
+  adminTime = Math.min(60, Math.max(5, adminTime + delta));
+  document.getElementById('adm-time').textContent = adminTime;
+};
 
 // UI
 function show(id) {
@@ -504,7 +553,7 @@ window.handleJoin = async () => {
   btn.disabled = true; btn.textContent = 'Підключаємось...';
   try {
     const s = (await get(ref(db,'quiz/status'))).val();
-    if (['active','review'].includes(s)) {
+    if (['active','review','finished'].includes(s)) {
       err.textContent = 'Квіз уже йде! Зачекай наступного сеансу.';
       btn.disabled = false; btn.textContent = 'Приєднатись 🚀'; return;
     }
@@ -531,11 +580,13 @@ function listen() {
   onValue(ref(db,'quiz'), snap => {
     if (!snap.exists()) return;
     const s = snap.val(); qstate = s;
+    // sync TIME from Firebase so all clients use same value
+    if (s.timePerQuestion) TIME = s.timePerQuestion;
     if (isAdmin) updAdm(s);
     if (!myId && !isAdmin) return;
     switch(s.status) {
-      case 'waiting':     show('waiting'); break;
-      case 'active':      renderQ(s); break;
+      case 'waiting':     lastRenderedQ=-1; show('waiting'); break;
+      case 'active':      if(s.currentQuestion!==lastRenderedQ){ lastRenderedQ=s.currentQuestion; renderQ(s); } break;
       case 'review':      renderRv(s); break;
       case 'leaderboard': renderLb('lb-mid', s); show('leaderboard'); break;
       case 'finished':    renderFinished(s); break;
@@ -561,10 +612,16 @@ function renderQ(s) {
   const el = Math.floor((Date.now()-(s.questionStartedAt||Date.now()))/1000);
   let rem = Math.max(0, TIME-el);
   tick(rem);
-  tmrIv = setInterval(() => { rem--; tick(rem); if(rem<=0) clearInterval(tmrIv); }, 1000);
+  tmrIv = setInterval(() => {
+    rem--;
+    if (rem < 0) { clearInterval(tmrIv); return; }
+    tick(rem);
+    if (rem === 0) clearInterval(tmrIv);
+  }, 1000);
 }
 function tick(s) {
-  const C=150.8, r=Math.max(0,s/TIME);
+  if (s < 0) s = 0;
+  const C=150.8, r=s/TIME;
   const fg=document.getElementById('t-fg');
   fg.style.strokeDashoffset=C*(1-r);
   fg.style.stroke=s<=5?'var(--red)':s<=10?'var(--ylw)':'var(--cyan)';
@@ -575,7 +632,14 @@ function pick(i, q, qi) {
   if(myAns!==null) return; myAns=i;
   document.querySelectorAll('.ans-btn').forEach(b=>b.disabled=true);
   document.querySelectorAll('.ans-btn')[i].classList.add('selected');
-  const ok=i===q.c, pts=ok?100:0;
+  const ok = i===q.c;
+  // швидкісні бали: 1000 за миттєву відповідь, мінімум 100 за правильну
+  let pts = 0;
+  if (ok) {
+    const elapsed = (Date.now() - (qstate?.questionStartedAt || Date.now())) / 1000;
+    const ratio   = Math.max(0, Math.min(1, 1 - elapsed / TIME));
+    pts = Math.max(100, Math.round(1000 * ratio));
+  }
   myScore+=pts; myLog[`q${qi}`]={answer:i,correct:ok,points:pts};
   update(ref(db,`quiz/players/${myId}`),{score:myScore,[`answers/q${qi}`]:{answer:i,correct:ok,points:pts}});
   hud();
@@ -587,11 +651,12 @@ function renderRv(s) {
   const q=Q[s.currentQuestion], ok=myAns!==null&&myAns===q.c, ans=myAns!==null;
   const key=`q${s.currentQuestion}`;
   if(!myLog[key]) myLog[key]={answer:null,correct:false,points:0};
+  const pts = myLog[key].points || 0;
   document.getElementById('rv-icon').textContent  = !ans?'⏰':ok?'✅':'❌';
   document.getElementById('rv-title').textContent = !ans?'ЧАС ВИЙШОВ!':ok?'ПРАВИЛЬНО!':'НЕПРАВИЛЬНО!';
   document.getElementById('rv-sub').textContent   = `Правильна відповідь: ${q.a[q.c]}`;
   const pe=document.getElementById('rv-pts');
-  pe.textContent=ok?'+100':'+0'; pe.style.color=ok?'var(--grn)':'var(--red)';
+  pe.textContent=ok?`+${pts}`:'+0'; pe.style.color=ok?'var(--grn)':'var(--red)';
   document.getElementById('rv-tot').textContent=myScore;
   show('review');
 }
@@ -620,7 +685,7 @@ function renderFinished(s) {
   const ng=Object.values(myLog).filter(x=>!x.correct&&x.answer!==null).length;
   const sk=Q.length-ok-ng;
   document.getElementById('fin-sc').textContent  = myScore;
-  document.getElementById('fin-max').textContent = Q.length*100;
+  document.getElementById('fin-max').textContent = Q.length*1000;
   document.getElementById('fin-ok').textContent  = ok;
   document.getElementById('fin-ng').textContent  = ng;
   document.getElementById('fin-sk').textContent  = sk;
@@ -661,6 +726,37 @@ function renderAdmLb(players) {
       <div class="adm-lb-score">${p.score}</div>`;
     el.appendChild(r);
   });
+  // answer distribution for current active question
+  if (qstate?.status==='active' || qstate?.status==='review') {
+    const qi = qstate.currentQuestion;
+    const q  = Q[qi];
+    const counts = [0,0,0,0];
+    let answered = 0;
+    Object.values(players).forEach(p => {
+      const a = p.answers?.[`q${qi}`];
+      if (a !== undefined && a !== null && typeof a === 'object' && a.answer !== null && a.answer !== undefined) {
+        counts[a.answer]++;
+        answered++;
+      }
+    });
+    const total = Object.keys(players).length;
+    const max   = Math.max(1, ...counts);
+    document.getElementById('adm-dist-wrap').style.display = 'block';
+    document.getElementById('adm-answered').textContent = answered;
+    document.getElementById('adm-total').textContent    = total;
+    const el2 = document.getElementById('adm-dist'); el2.innerHTML='';
+    counts.forEach((cnt, i) => {
+      const isCorrect = i === q.c;
+      const pct = Math.round(cnt/max*100);
+      el2.innerHTML += `<div class="dist-row">
+        <div class="dist-ltr">${L[i]}</div>
+        <div class="dist-bwrap"><div class="dist-bar${isCorrect?' ok':''}" style="width:${pct}%"></div></div>
+        <div class="dist-cnt">${cnt}</div>
+      </div>`;
+    });
+  } else {
+    document.getElementById('adm-dist-wrap').style.display = 'none';
+  }
 }
 
 function updAdm(s) {
@@ -676,7 +772,13 @@ function updAdm(s) {
     s.status==='review'?'📊 Рейтинг / наступне':'▶ Наступне питання';
 }
 
-window.adminStart = async()=>{ await update(ref(db,'quiz'),{status:'active',currentQuestion:0,questionStartedAt:Date.now()}); };
+window.adminStart = async()=>{
+  await update(ref(db,'quiz'),{
+    status:'active', currentQuestion:0,
+    questionStartedAt:Date.now(),
+    timePerQuestion: adminTime
+  });
+};
 
 window.adminNext = async()=>{
   const s=qstate; if(!s) return;
@@ -687,7 +789,7 @@ window.adminNext = async()=>{
     const last=qi+1>=Q.length, lb=last||(qi+1)%3===0;
     await update(ref(db,'quiz'), lb
       ? {status:last?'finished':'leaderboard', players}
-      : {status:'active',currentQuestion:qi+1,questionStartedAt:Date.now()});
+      : {status:'active',currentQuestion:qi+1,questionStartedAt:Date.now(),timePerQuestion:adminTime});
     return;
   }
   if(s.status==='leaderboard'){
@@ -696,14 +798,14 @@ window.adminNext = async()=>{
       const players=(await get(ref(db,'quiz/players'))).val()||{};
       await update(ref(db,'quiz'),{status:'finished',players});
     } else {
-      await update(ref(db,'quiz'),{status:'active',currentQuestion:qi+1,questionStartedAt:Date.now()});
+      await update(ref(db,'quiz'),{status:'active',currentQuestion:qi+1,questionStartedAt:Date.now(),timePerQuestion:adminTime});
     }
   }
 };
 
 window.adminReset = async()=>{
   if(!confirm('Скинути весь квіз та всіх гравців?')) return;
-  myLog={}; myScore=0; hud();
+  myLog={}; myScore=0; lastRenderedQ=-1; hud();
   await set(ref(db,'quiz'),{status:'waiting',currentQuestion:0});
 };
 
@@ -714,6 +816,20 @@ window.adminReset = async()=>{
     show('waiting');
     if(!(await get(ref(db,'quiz/status'))).exists())
       await set(ref(db,'quiz'),{status:'waiting',currentQuestion:0});
+    listen(); return;
+  }
+  const sid=sessionStorage.getItem('qid'), sn=sessionStorage.getItem('qname');
+  if(sid&&sn){
+    myId=sid; myName=sn;
+    const snap=await get(ref(db,`quiz/players/${myId}`));
+    if(snap.exists()){ myScore=snap.val().score||0; Object.assign(myLog,snap.val().answers||{}); }
+    hud(); show('waiting'); listen();
+  }
+})();
+</script>
+</body>
+</html>
+
     listen(); return;
   }
   const sid=sessionStorage.getItem('qid'), sn=sessionStorage.getItem('qname');
