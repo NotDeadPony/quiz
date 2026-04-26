@@ -278,6 +278,8 @@
     .adm-btn:last-child { margin-bottom:0; }
     .adm-btn:hover { transform:translateY(-1px); }
     .adm-start { background:var(--grn); color:#07091A; }
+    .adm-close { background:var(--ylw); color:#07091A; }
+    .adm-lb    { background:var(--purp); color:#fff; }
     .adm-next  { background:var(--cyan); color:#07091A; }
     .adm-reset { background:transparent; border:1px solid var(--red); color:var(--red); }
 
@@ -448,8 +450,10 @@
   <div class="adm-lb" id="adm-lb"></div>
 
   <hr class="adm-hr">
-  <button class="adm-btn adm-start" id="adm-start" onclick="adminStart()">▶ ПОЧАТИ КВІЗ</button>
-  <button class="adm-btn adm-next"  id="adm-next"  onclick="adminNext()" style="display:none">⏭ ДАЛІ</button>
+  <button class="adm-btn adm-start" id="adm-start"  onclick="adminStart()">▶ ПОЧАТИ КВІЗ</button>
+  <button class="adm-btn adm-close" id="adm-close"  onclick="adminClose()"  style="display:none">⏹ ЗАКРИТИ ПИТАННЯ</button>
+  <button class="adm-btn adm-lb"    id="adm-show-lb" onclick="adminShowLb()" style="display:none">📊 РЕЙТИНГ</button>
+  <button class="adm-btn adm-next"  id="adm-next-q" onclick="adminNextQ()"  style="display:none">▶ НАСТУПНЕ ПИТАННЯ</button>
   <button class="adm-btn adm-reset" onclick="adminReset()">🔄 Скинути все</button>
 </div>
 
@@ -585,8 +589,16 @@ function listen() {
     if (isAdmin) updAdm(s);
     if (!myId && !isAdmin) return;
     switch(s.status) {
-      case 'waiting':     lastRenderedQ=-1; show('waiting'); break;
-      case 'active':      if(s.currentQuestion!==lastRenderedQ){ lastRenderedQ=s.currentQuestion; renderQ(s); } break;
+      case 'waiting':
+        lastRenderedQ=-1; show('waiting'); break;
+      case 'active':
+        if (isAdmin) {
+          // Адмін бачить live рейтинг під час питання, а не саме питання
+          renderLb('lb-mid', s); show('leaderboard');
+        } else {
+          if(s.currentQuestion!==lastRenderedQ){ lastRenderedQ=s.currentQuestion; renderQ(s); }
+        }
+        break;
       case 'review':      renderRv(s); break;
       case 'leaderboard': renderLb('lb-mid', s); show('leaderboard'); break;
       case 'finished':    renderFinished(s); break;
@@ -616,7 +628,11 @@ function renderQ(s) {
     rem--;
     if (rem < 0) { clearInterval(tmrIv); return; }
     tick(rem);
-    if (rem === 0) clearInterval(tmrIv);
+    if (rem === 0) {
+      clearInterval(tmrIv);
+      // Адмін автоматично переходить до огляду по закінченню часу
+      if (isAdmin) setTimeout(() => adminClose(), 600);
+    }
   }, 1000);
 }
 function tick(s) {
@@ -764,41 +780,57 @@ function updAdm(s) {
   document.getElementById('adm-st').textContent=sm[s.status]||s.status;
   document.getElementById('adm-qi').textContent=
     ['active','review','leaderboard'].includes(s.status)?`${(s.currentQuestion||0)+1}/${Q.length}`:'—';
-  const going=['active','review','leaderboard'].includes(s.status);
-  document.getElementById('adm-start').style.display=going?'none':'block';
-  document.getElementById('adm-next').style.display=going?'block':'none';
-  document.getElementById('adm-next').textContent=
-    s.status==='active'?'⏭ Закрити питання':
-    s.status==='review'?'📊 Рейтинг / наступне':'▶ Наступне питання';
+
+  const show = (id, vis) => document.getElementById(id).style.display = vis ? 'block' : 'none';
+  show('adm-start',  ['idle','waiting'].includes(s.status));
+  show('adm-close',  s.status === 'active');
+  show('adm-show-lb',s.status === 'review');
+  show('adm-next-q', s.status === 'leaderboard' || s.status === 'review');
 }
 
-window.adminStart = async()=>{
-  await update(ref(db,'quiz'),{
+window.adminStart = async () => {
+  await update(ref(db,'quiz'), {
     status:'active', currentQuestion:0,
     questionStartedAt:Date.now(),
     timePerQuestion: adminTime
   });
 };
 
-window.adminNext = async()=>{
-  const s=qstate; if(!s) return;
-  if(s.status==='active'){ await update(ref(db,'quiz'),{status:'review'}); return; }
-  if(s.status==='review'){
-    const qi=s.currentQuestion;
-    const players=(await get(ref(db,'quiz/players'))).val()||{};
-    const last=qi+1>=Q.length, lb=last||(qi+1)%3===0;
-    await update(ref(db,'quiz'), lb
-      ? {status:last?'finished':'leaderboard', players}
-      : {status:'active',currentQuestion:qi+1,questionStartedAt:Date.now(),timePerQuestion:adminTime});
+// Закрити питання → показати правильну відповідь
+window.adminClose = async () => {
+  if (qstate?.status !== 'active') return;
+  await update(ref(db,'quiz'), { status:'review' });
+};
+
+// Показати рейтинг між питаннями
+window.adminShowLb = async () => {
+  if (qstate?.status !== 'review') return;
+  const players = (await get(ref(db,'quiz/players'))).val() || {};
+  await update(ref(db,'quiz'), { status:'leaderboard', players });
+};
+
+// Наступне питання (з review або leaderboard)
+window.adminNextQ = async () => {
+  const s = qstate; if (!s) return;
+  const qi = s.currentQuestion;
+  const isLast = qi + 1 >= Q.length;
+
+  if (s.status === 'review') {
+    if (isLast) {
+      const players = (await get(ref(db,'quiz/players'))).val() || {};
+      await update(ref(db,'quiz'), { status:'finished', players });
+    } else {
+      await update(ref(db,'quiz'), { status:'active', currentQuestion:qi+1, questionStartedAt:Date.now(), timePerQuestion:adminTime });
+    }
     return;
   }
-  if(s.status==='leaderboard'){
-    const qi=s.currentQuestion;
-    if(qi+1>=Q.length){
-      const players=(await get(ref(db,'quiz/players'))).val()||{};
-      await update(ref(db,'quiz'),{status:'finished',players});
+
+  if (s.status === 'leaderboard') {
+    if (isLast) {
+      const players = (await get(ref(db,'quiz/players'))).val() || {};
+      await update(ref(db,'quiz'), { status:'finished', players });
     } else {
-      await update(ref(db,'quiz'),{status:'active',currentQuestion:qi+1,questionStartedAt:Date.now(),timePerQuestion:adminTime});
+      await update(ref(db,'quiz'), { status:'active', currentQuestion:qi+1, questionStartedAt:Date.now(), timePerQuestion:adminTime });
     }
   }
 };
