@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>IT Квіз — Коледж ІСТ КНЕУ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    :root {
+      --bg:    #07091A;
+      --surf:  #0D1130;
+      --surf2: #141836;
+      --brd:   #1F2B52;
+      --cyan:  #00E5FF;
+      --purp:  #9B6BFF;
+      --grn:   #00FF88;
+      --red:   #FF3864;
+      --ylw:   #FFE500;
+      --txt:   #E0E8FF;
+      --dim:   #5B6D98;
+    }
+
+    html { scroll-behavior:smooth; }
+
+    body {
+      background:var(--bg); color:var(--txt);
+      font-family:'Nunito',sans-serif;
+      min-height:100dvh;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      position:relative;
+    }
+    body::before {
+      content:''; position:fixed; inset:0;
+      background:
+        radial-gradient(ellipse 900px 600px at 15% 5%, rgba(0,229,255,.07) 0%,transparent 70%),
+        radial-gradient(ellipse 700px 500px at 85% 95%,rgba(155,107,255,.07) 0%,transparent 70%);
+      pointer-events:none; z-index:0;
+    }
+    body::after {
+      content:''; position:fixed; inset:0;
+      background-image:radial-gradient(rgba(255,255,255,.035) 1px,transparent 1px);
+      background-size:28px 28px; pointer-events:none; z-index:0;
+    }
+
+    /* screens */
+    .screen {
+      display:none; flex-direction:column;
+      align-items:center; justify-content:center;
+      width:100%; max-width:580px;
+      padding:20px 18px; position:relative; z-index:1;
+    }
+    .screen.active { display:flex; animation:fadeUp .4s ease; }
+    .screen.scrollable {
+      justify-content:flex-start; min-height:100dvh;
+      padding-top:80px; padding-bottom:50px;
+      overflow-y:auto;
+    }
+    @keyframes fadeUp {
+      from{opacity:0;transform:translateY(22px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+
+    /* logo */
+    .logo {
+      font-family:'Bebas Neue',cursive;
+      font-size:clamp(2.5rem,8vw,3.8rem);
+      letter-spacing:5px;
+      background:linear-gradient(135deg,var(--cyan),var(--purp));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+      background-clip:text; text-align:center; line-height:1; margin-bottom:4px;
+    }
+    .tagline {
+      color:var(--dim); font-size:.78rem;
+      letter-spacing:2px; text-transform:uppercase;
+      text-align:center; margin-bottom:26px;
+    }
+
+    /* card */
+    .card {
+      background:var(--surf); border:1px solid var(--brd);
+      border-radius:22px; padding:26px 22px; width:100%;
+    }
+
+    /* input */
+    .field-label {
+      display:block; font-size:.74rem; font-weight:700;
+      letter-spacing:1.5px; text-transform:uppercase;
+      color:var(--dim); margin-bottom:8px;
+    }
+    input[type=text] {
+      width:100%; background:var(--surf2);
+      border:2px solid var(--brd); border-radius:12px;
+      padding:14px 18px; font-size:1.05rem;
+      font-family:'Nunito',sans-serif; color:var(--txt);
+      outline:none; transition:border-color .2s,box-shadow .2s; margin-bottom:12px;
+    }
+    input[type=text]:focus { border-color:var(--cyan); box-shadow:0 0 0 3px rgba(0,229,255,.12); }
+    input[type=text]::placeholder { color:var(--dim); }
+
+    /* buttons */
+    .btn {
+      display:block; width:100%; padding:15px 24px; border:none; border-radius:14px;
+      font-family:'Nunito',sans-serif; font-size:1rem; font-weight:800;
+      cursor:pointer; transition:transform .18s,box-shadow .18s,opacity .18s;
+    }
+    .btn:disabled { opacity:.4; cursor:not-allowed; transform:none!important; }
+    .btn-primary { background:linear-gradient(135deg,var(--cyan),#009FBB); color:#07091A; }
+    .btn-primary:not(:disabled):hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(0,229,255,.28); }
+    .btn-ghost { background:var(--surf2); border:1px solid var(--brd); color:var(--txt); margin-top:8px; }
+    .btn-ghost:hover { border-color:var(--cyan); }
+    .btn-danger { background:rgba(255,56,100,.12); border:1px solid var(--red); color:var(--red); margin-top:8px; }
+
+    .error-msg { min-height:18px; color:var(--red); font-size:.82rem; text-align:center; margin-bottom:10px; }
+
+    /* waiting */
+    .big-num {
+      font-family:'Bebas Neue',cursive; font-size:5.5rem; line-height:1;
+      background:linear-gradient(135deg,var(--cyan),var(--purp));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+      background-clip:text; text-align:center;
+    }
+    .big-label { text-align:center; color:var(--dim); font-size:.85rem; margin-bottom:28px; }
+    .pulse-row { display:flex; align-items:center; justify-content:center; gap:9px; color:var(--dim); font-size:.82rem; }
+    .dot { width:8px; height:8px; border-radius:50%; background:var(--cyan); animation:blink 1.4s infinite; }
+    @keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.25;transform:scale(.75)} }
+
+    /* question */
+    .q-hdr { display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:16px; }
+    .q-lbl { font-size:.8rem; font-weight:700; color:var(--dim); letter-spacing:.5px; }
+
+    .timer-wrap { position:relative; width:58px; height:58px; flex-shrink:0; }
+    .timer-wrap svg { transform:rotate(-90deg); }
+    .timer-wrap circle { fill:none; stroke-width:4.5; }
+    .t-bg { stroke:var(--surf2); }
+    .t-fg { stroke:var(--cyan); stroke-linecap:round; transition:stroke-dashoffset 1s linear,stroke .4s; }
+    .t-num {
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+      font-family:'Bebas Neue',cursive; font-size:1.45rem;
+    }
+
+    .q-text {
+      font-size:clamp(.95rem,3.5vw,1.2rem); font-weight:800;
+      text-align:center; line-height:1.45; margin-bottom:22px; min-height:56px;
+    }
+
+    .ans-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; }
+    .ans-btn {
+      position:relative; padding:18px 12px 14px;
+      background:var(--surf); border:2px solid var(--brd); border-radius:16px;
+      color:var(--txt); font-family:'Nunito',sans-serif; font-size:.88rem; font-weight:700;
+      cursor:pointer; transition:border-color .18s,background .18s,transform .18s;
+      text-align:center; line-height:1.3;
+    }
+    .ans-btn::before {
+      content:attr(data-l); position:absolute; top:7px; left:10px;
+      font-family:'Bebas Neue',cursive; font-size:1rem; color:var(--dim);
+    }
+    .ans-btn:not(:disabled):hover { border-color:var(--cyan); background:rgba(0,229,255,.07); transform:scale(1.02); }
+    .ans-btn.selected { border-color:var(--cyan);  background:rgba(0,229,255,.1); }
+    .ans-btn.correct  { border-color:var(--grn);   background:rgba(0,255,136,.12); color:var(--grn); }
+    .ans-btn.wrong    { border-color:var(--red);    background:rgba(255,56,100,.12); color:var(--red); }
+    .ans-btn:disabled { cursor:not-allowed; }
+
+    /* review */
+    .rv-icon  { font-size:3.8rem; margin-bottom:10px; }
+    .rv-title { font-family:'Bebas Neue',cursive; font-size:2.2rem; letter-spacing:3px; margin-bottom:6px; }
+    .rv-sub   { color:var(--dim); font-size:.88rem; margin-bottom:22px; }
+    .pts-num  { font-family:'Bebas Neue',cursive; font-size:4.5rem; line-height:1; animation:popIn .5s cubic-bezier(.17,.89,.32,1.27); }
+    .pts-lbl  { color:var(--dim); font-size:.82rem; margin-top:4px; }
+    @keyframes popIn { from{transform:scale(.2);opacity:0} to{transform:scale(1);opacity:1} }
+
+    /* leaderboard */
+    .lb-title { font-family:'Bebas Neue',cursive; font-size:2rem; letter-spacing:3px; color:var(--cyan); text-align:center; margin-bottom:14px; }
+    .lb-list  { width:100%; display:flex; flex-direction:column; gap:8px; }
+    .lb-row {
+      display:flex; align-items:center; gap:12px;
+      padding:12px 15px; background:var(--surf);
+      border:1px solid var(--brd); border-radius:13px;
+      animation:slideR .3s ease backwards;
+    }
+    .lb-row.r1{border-color:var(--ylw)} .lb-row.r2{border-color:#B8C0CC} .lb-row.r3{border-color:#C87533}
+    .lb-row.me { box-shadow:0 0 0 2px var(--cyan) inset; }
+    @keyframes slideR { from{transform:translateX(-18px);opacity:0} to{transform:translateX(0);opacity:1} }
+    .lb-rank { font-family:'Bebas Neue',cursive; font-size:1.35rem; width:32px; text-align:center; color:var(--dim); }
+    .lb-row.r1 .lb-rank{color:var(--ylw)} .lb-row.r2 .lb-rank{color:#B8C0CC} .lb-row.r3 .lb-rank{color:#C87533}
+    .lb-name  { flex:1; font-weight:700; font-size:.92rem; }
+    .lb-score { font-family:'Bebas Neue',cursive; font-size:1.3rem; color:var(--cyan); }
+
+    /* tabs */
+    .tabs {
+      display:flex; width:100%; gap:0;
+      background:var(--surf2); border:1px solid var(--brd);
+      border-radius:14px; padding:4px; margin-bottom:14px;
+    }
+    .tab-btn {
+      flex:1; padding:10px 6px; border:none; border-radius:11px;
+      background:transparent; color:var(--dim);
+      font-family:'Nunito',sans-serif; font-size:.82rem; font-weight:800;
+      cursor:pointer; transition:background .2s,color .2s;
+    }
+    .tab-btn.on { background:var(--surf); color:var(--txt); }
+    .tab-pane { display:none; width:100%; }
+    .tab-pane.on { display:block; }
+
+    /* my result */
+    .my-res {
+      background:linear-gradient(135deg,rgba(0,229,255,.08),rgba(155,107,255,.08));
+      border:1px solid var(--brd); border-radius:16px;
+      padding:20px; text-align:center; margin-bottom:14px;
+    }
+    .my-res .sc-big {
+      font-family:'Bebas Neue',cursive; font-size:3.5rem; line-height:1;
+      background:linear-gradient(135deg,var(--cyan),var(--purp));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    }
+    .my-res .sc-sub { color:var(--dim); font-size:.82rem; margin-top:2px; }
+    .stat-row { display:flex; justify-content:center; gap:24px; margin-top:14px; }
+    .stat-item { text-align:center; }
+    .stat-val  { font-family:'Bebas Neue',cursive; font-size:1.7rem; }
+    .stat-lbl  { font-size:.72rem; color:var(--dim); letter-spacing:.5px; text-transform:uppercase; }
+
+    /* answer review */
+    .arv-list { display:flex; flex-direction:column; gap:10px; width:100%; }
+    .arv-item {
+      background:var(--surf); border:1px solid var(--brd);
+      border-radius:14px; padding:14px 16px;
+    }
+    .arv-item.ok { border-color:rgba(0,255,136,.3); }
+    .arv-item.ng { border-color:rgba(255,56,100,.3); }
+    .arv-item.sk { border-color:rgba(255,229,0,.25); }
+    .arv-num  { font-size:.72rem; color:var(--dim); font-weight:700; letter-spacing:.5px; margin-bottom:6px; }
+    .arv-q    { font-size:.9rem; font-weight:800; margin-bottom:10px; line-height:1.4; }
+    .arv-opts { display:flex; flex-direction:column; gap:5px; }
+    .arv-opt  { padding:7px 12px; border-radius:9px; font-size:.82rem; font-weight:700; background:var(--surf2); color:var(--dim); }
+    .arv-opt.is-correct   { background:rgba(0,255,136,.12); color:var(--grn); }
+    .arv-opt.is-mine-wrong{ background:rgba(255,56,100,.12); color:var(--red); }
+    .arv-opt .badge { font-size:.7rem; margin-left:6px; opacity:.8; }
+
+    /* HUD */
+    .hud {
+      position:fixed; top:14px; z-index:50;
+      background:var(--surf2); border:1px solid var(--brd);
+      border-radius:20px; padding:5px 13px; font-size:.76rem; color:var(--dim);
+    }
+    #hud-name  { left:14px; }
+    #hud-score { right:14px; }
+    #hud-name  strong { color:var(--cyan); }
+    #hud-score strong { font-family:'Bebas Neue',cursive; font-size:1rem; color:var(--ylw); }
+
+    /* admin */
+    #adm {
+      display:none; position:fixed; bottom:18px; right:18px;
+      background:var(--surf2); border:2px solid var(--purp);
+      border-radius:20px; padding:18px 20px; z-index:200; width:290px;
+      box-shadow:0 0 40px rgba(155,107,255,.2);
+    }
+    #adm.on { display:block; }
+    .adm-title { font-family:'Bebas Neue',cursive; font-size:1.2rem; letter-spacing:2px; color:var(--purp); margin-bottom:12px; }
+    .adm-stat  { display:flex; justify-content:space-between; font-size:.8rem; color:var(--dim); margin-bottom:6px; }
+    .adm-stat span { color:var(--txt); font-weight:700; }
+    hr.adm-hr  { border:none; border-top:1px solid var(--brd); margin:12px 0; }
+
+    .adm-lb { display:flex; flex-direction:column; gap:4px; }
+    .adm-lb-row { display:flex; align-items:center; gap:8px; font-size:.78rem; padding:3px 0; }
+    .adm-lb-rank  { width:22px; text-align:center; font-family:'Bebas Neue',cursive; font-size:1rem; color:var(--dim); }
+    .adm-lb-name  { flex:1; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .adm-lb-score { font-family:'Bebas Neue',cursive; font-size:1rem; color:var(--cyan); }
+
+    .adm-btn {
+      display:block; width:100%; padding:10px; border:none; border-radius:10px;
+      font-family:'Nunito',sans-serif; font-size:.85rem; font-weight:800;
+      cursor:pointer; margin-bottom:7px; transition:transform .15s;
+    }
+    .adm-btn:last-child { margin-bottom:0; }
+    .adm-btn:hover { transform:translateY(-1px); }
+    .adm-start { background:var(--grn); color:#07091A; }
+    .adm-next  { background:var(--cyan); color:#07091A; }
+    .adm-reset { background:transparent; border:1px solid var(--red); color:var(--red); }
+
+    @media(max-width:430px){
+      .ans-grid { grid-template-columns:1fr; }
+      #adm { width:calc(100% - 28px); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HUD -->
+<div class="hud" id="hud-name"  style="display:none">👤 <strong id="hud-nv"></strong></div>
+<div class="hud" id="hud-score" style="display:none">⭐ <strong id="hud-sv">0</strong></div>
+
+<!-- ══ JOIN ══ -->
+<div class="screen active" id="screen-join">
+  <div class="logo">IT КВІЗ</div>
+  <div class="tagline">Коледж ІСТ КНЕУ • День спеціальності</div>
+  <div class="card">
+    <label class="field-label">Твоє ім'я</label>
+    <input type="text" id="inp-name" placeholder="Введи своє ім'я..." maxlength="20" autocomplete="off">
+    <div class="error-msg" id="join-err"></div>
+    <button class="btn btn-primary" onclick="handleJoin()">Приєднатись 🚀</button>
+  </div>
+</div>
+
+<!-- ══ WAITING ══ -->
+<div class="screen" id="screen-waiting">
+  <div class="logo">IT КВІЗ</div>
+  <div class="tagline">Очікування початку</div>
+  <div class="card" style="text-align:center">
+    <div class="big-num" id="wait-cnt">0</div>
+    <div class="big-label">учасників у грі</div>
+    <div class="pulse-row"><div class="dot"></div><span>Чекаємо викладача...</span></div>
+  </div>
+</div>
+
+<!-- ══ QUESTION ══ -->
+<div class="screen" id="screen-question">
+  <div class="q-hdr">
+    <div class="q-lbl" id="q-lbl">Питання 1 / 12</div>
+    <div class="timer-wrap">
+      <svg width="58" height="58" viewBox="0 0 58 58">
+        <circle class="t-bg" cx="29" cy="29" r="24" stroke-dasharray="150.8" stroke-dashoffset="0"/>
+        <circle class="t-fg" id="t-fg" cx="29" cy="29" r="24" stroke-dasharray="150.8" stroke-dashoffset="0"/>
+      </svg>
+      <div class="t-num" id="t-num">20</div>
+    </div>
+  </div>
+  <div class="q-text" id="q-txt"></div>
+  <div class="ans-grid" id="q-grid"></div>
+</div>
+
+<!-- ══ REVIEW ══ -->
+<div class="screen" id="screen-review">
+  <div class="card" style="text-align:center">
+    <div class="rv-icon"  id="rv-icon">✅</div>
+    <div class="rv-title" id="rv-title">ПРАВИЛЬНО!</div>
+    <div class="rv-sub"   id="rv-sub"></div>
+    <div class="pts-num"  id="rv-pts" style="color:var(--grn)">+100</div>
+    <div class="pts-lbl">Мій рахунок: <strong id="rv-tot" style="color:var(--cyan)">0</strong></div>
+  </div>
+</div>
+
+<!-- ══ LEADERBOARD (між питаннями) ══ -->
+<div class="screen" id="screen-leaderboard">
+  <div class="lb-title">🏆 РЕЙТИНГ</div>
+  <div class="lb-list" id="lb-mid"></div>
+</div>
+
+<!-- ══ FINISHED ══ -->
+<div class="screen scrollable" id="screen-finished">
+  <div class="logo" style="margin-bottom:6px">ФІНАЛ!</div>
+  <div class="tagline">Квіз завершено 🎉</div>
+
+  <div class="tabs">
+    <button class="tab-btn on" onclick="switchTab('t-me')">📊 Мій результат</button>
+    <button class="tab-btn"   onclick="switchTab('t-lb')">🏆 Рейтинг</button>
+    <button class="tab-btn"   onclick="switchTab('t-ans')">✅ Відповіді</button>
+  </div>
+
+  <!-- My result -->
+  <div class="tab-pane on" id="t-me">
+    <div class="my-res">
+      <div class="sc-big" id="fin-sc">0</div>
+      <div class="sc-sub">балів із <span id="fin-max">0</span> можливих</div>
+      <div class="stat-row">
+        <div class="stat-item">
+          <div class="stat-val" id="fin-ok"  style="color:var(--grn)">0</div>
+          <div class="stat-lbl">правильно</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val" id="fin-ng"  style="color:var(--red)">0</div>
+          <div class="stat-lbl">неправильно</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val" id="fin-sk"  style="color:var(--ylw)">0</div>
+          <div class="stat-lbl">пропущено</div>
+        </div>
+      </div>
+    </div>
+    <div style="text-align:center;color:var(--dim);font-size:.82rem;line-height:1.9;padding:6px 0">
+      Дякуємо за участь! 🚀<br>
+      <strong style="color:var(--cyan)">Коледж ІСТ КНЕУ</strong> чекає тебе!
+    </div>
+  </div>
+
+  <!-- Leaderboard -->
+  <div class="tab-pane" id="t-lb">
+    <div class="lb-list" id="lb-fin"></div>
+  </div>
+
+  <!-- Answers review -->
+  <div class="tab-pane" id="t-ans">
+    <div class="arv-list" id="arv-list"></div>
+  </div>
+</div>
+
+<!-- ══ ADMIN ══ -->
+<div id="adm">
+  <div class="adm-title">⚙️ АДМІН</div>
+  <div class="adm-stat">Учасники <span id="adm-pl">0</span></div>
+  <div class="adm-stat">Статус   <span id="adm-st">—</span></div>
+  <div class="adm-stat">Питання  <span id="adm-qi">—</span></div>
+  <hr class="adm-hr">
+  <div style="font-size:.7rem;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Live рейтинг</div>
+  <div class="adm-lb" id="adm-lb"></div>
+  <hr class="adm-hr">
+  <button class="adm-btn adm-start" id="adm-start" onclick="adminStart()">▶ ПОЧАТИ КВІЗ</button>
+  <button class="adm-btn adm-next"  id="adm-next"  onclick="adminNext()" style="display:none">⏭ ДАЛІ</button>
+  <button class="adm-btn adm-reset" onclick="adminReset()">🔄 Скинути все</button>
+</div>
+
+<script type="module">
+// ─────────────────────────────────────────────
+// 📝 ПИТАННЯ — РЕДАГУЙ ЦЕЙ МАСИВ
+// ─────────────────────────────────────────────
+const Q = [
+  { text:"🎨 Малює макети сайтів та додатків: підбирає кольори, шрифти і розташування елементів",
+    a:["Frontend-розробник","UX/UI дизайнер","DevOps-інженер","DBA"], c:1 },
+  { text:"🖥️ Верстає кнопки, меню та анімації — все що ти БАЧИШ очима на сайті",
+    a:["Backend-розробник","QA-інженер","Frontend-розробник","ML-інженер"], c:2 },
+  { text:"🔍 Навмисно «ламає» програму щоб знайти всі баги ДО того як її побачать користувачі",
+    a:["DevOps-інженер","QA-інженер (тестувальник)","Frontend-розробник","DBA"], c:1 },
+  { text:"🗄️ Пише логіку сервера — реєстрацію, платежі, збереження та обробку даних",
+    a:["Frontend-розробник","UX/UI дизайнер","Backend-розробник","System Admin"], c:2 },
+  { text:"📱 Розробляє додатки для смартфонів на iOS та Android",
+    a:["Mobile-розробник","Frontend-розробник","DevOps-інженер","Data Analyst"], c:0 },
+  { text:"🛡️ Шукає «дірки» в системі та захищає її від хакерів",
+    a:["DBA","QA-інженер","Cybersecurity-фахівець","System Admin"], c:2 },
+  { text:"📊 Аналізує мільйони рядків даних і будує прогнози та графіки для бізнесу",
+    a:["Backend-розробник","Data Scientist / Analyst","Mobile-розробник","DevOps-інженер"], c:1 },
+  { text:"⚙️ Налаштовує сервери так, щоб програма автоматично оновлювалась після кожного коміту",
+    a:["QA-інженер","Frontend-розробник","DBA","DevOps-інженер"], c:3 },
+  { text:"🗃️ Проектує та оптимізує бази даних — щоб мільйони записів знаходились за мілісекунди",
+    a:["System Admin","DBA (адмін баз даних)","Data Scientist","Mobile-розробник"], c:1 },
+  { text:"🌐 Налаштовує корпоративну мережу, роутери, VPN та доступи для співробітників",
+    a:["DevOps-інженер","Backend-розробник","Network / System Engineer","QA-інженер"], c:2 },
+  { text:"🤖 Навчає штучний інтелект розпізнавати фотографії та розуміти людську мову",
+    a:["Frontend-розробник","DBA","ML-інженер / AI-розробник","DevOps-інженер"], c:2 },
+  { text:"📦 Керує командою розробників, стежить за термінами та спілкується із замовником",
+    a:["QA-інженер","Project Manager / Scrum Master","DBA","System Admin"], c:1 }
+];
+const TIME = 20; // секунд на питання
+
+// ─────────────────────────────────────────────
+// 🔥 FIREBASE CONFIG — ЗАМІНИТИ! (README.md)
+// ─────────────────────────────────────────────
+const FB = {
+  apiKey:            "ЗАМІНИТИ",
+  authDomain:        "ЗАМІНИТИ.firebaseapp.com",
+  databaseURL:       "https://ЗАМІНИТИ-default-rtdb.firebaseio.com",
+  projectId:         "ЗАМІНИТИ",
+  storageBucket:     "ЗАМІНИТИ.appspot.com",
+  messagingSenderId: "ЗАМІНИТИ",
+  appId:             "ЗАМІНИТИ"
+};
+
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, set, get, push, update, onValue }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+const app = initializeApp(FB);
+const db  = getDatabase(app);
+
+const L = ['A','B','C','D'];
+const M = ['🥇','🥈','🥉'];
+const isAdmin = new URLSearchParams(location.search).has('admin');
+
+let myId  = null, myName = '', myScore = 0;
+let myAns = null, myLog  = {};   // { q0:{answer,correct}, ... }
+let tmrIv = null, qstate = null;
+
+// UI
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+function hud() {
+  if (!myName) return;
+  document.getElementById('hud-name').style.display = document.getElementById('hud-score').style.display = 'block';
+  document.getElementById('hud-nv').textContent = myName;
+  document.getElementById('hud-sv').textContent = myScore;
+}
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// TABS
+window.switchTab = id => {
+  const ids = ['t-me','t-lb','t-ans'];
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('on', ids[i]===id));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+};
+
+// JOIN
+window.handleJoin = async () => {
+  const name = document.getElementById('inp-name').value.trim();
+  const err  = document.getElementById('join-err');
+  err.textContent = '';
+  if (name.length < 2) { err.textContent = 'Мінімум 2 символи 😅'; return; }
+  const btn = document.querySelector('#screen-join .btn');
+  btn.disabled = true; btn.textContent = 'Підключаємось...';
+  try {
+    const s = (await get(ref(db,'quiz/status'))).val();
+    if (['active','review'].includes(s)) {
+      err.textContent = 'Квіз уже йде! Зачекай наступного сеансу.';
+      btn.disabled = false; btn.textContent = 'Приєднатись 🚀'; return;
+    }
+    const pr = push(ref(db,'quiz/players'));
+    myId = pr.key; myName = name;
+    await set(pr, { name, score:0, answers:{} });
+    sessionStorage.setItem('qid', myId);
+    sessionStorage.setItem('qname', myName);
+    hud(); show('waiting'); listen();
+  } catch(e) {
+    err.textContent = 'Помилка підключення. Перевір інтернет.';
+    btn.disabled = false; btn.textContent = 'Приєднатись 🚀';
+  }
+};
+document.getElementById('inp-name').addEventListener('keydown', e => { if(e.key==='Enter') handleJoin(); });
+
+// LISTEN
+function listen() {
+  onValue(ref(db,'quiz/players'), snap => {
+    const cnt = snap.exists() ? Object.keys(snap.val()).length : 0;
+    document.getElementById('wait-cnt').textContent = cnt;
+    if (isAdmin) { document.getElementById('adm-pl').textContent = cnt; renderAdmLb(snap.val()||{}); }
+  });
+  onValue(ref(db,'quiz'), snap => {
+    if (!snap.exists()) return;
+    const s = snap.val(); qstate = s;
+    if (isAdmin) updAdm(s);
+    if (!myId && !isAdmin) return;
+    switch(s.status) {
+      case 'waiting':     show('waiting'); break;
+      case 'active':      renderQ(s); break;
+      case 'review':      renderRv(s); break;
+      case 'leaderboard': renderLb('lb-mid', s); show('leaderboard'); break;
+      case 'finished':    renderFinished(s); break;
+    }
+  });
+}
+
+// QUESTION
+function renderQ(s) {
+  clearInterval(tmrIv); myAns = null;
+  const qi = s.currentQuestion, q = Q[qi];
+  document.getElementById('q-lbl').textContent = `Питання ${qi+1} / ${Q.length}`;
+  document.getElementById('q-txt').textContent = q.text;
+  const grid = document.getElementById('q-grid');
+  grid.innerHTML = '';
+  q.a.forEach((ans, i) => {
+    const b = document.createElement('button');
+    b.className='ans-btn'; b.setAttribute('data-l',L[i]); b.textContent=ans;
+    b.onclick = () => pick(i, q, qi);
+    grid.appendChild(b);
+  });
+  show('question');
+  const el = Math.floor((Date.now()-(s.questionStartedAt||Date.now()))/1000);
+  let rem = Math.max(0, TIME-el);
+  tick(rem);
+  tmrIv = setInterval(() => { rem--; tick(rem); if(rem<=0) clearInterval(tmrIv); }, 1000);
+}
+function tick(s) {
+  const C=150.8, r=Math.max(0,s/TIME);
+  const fg=document.getElementById('t-fg');
+  fg.style.strokeDashoffset=C*(1-r);
+  fg.style.stroke=s<=5?'var(--red)':s<=10?'var(--ylw)':'var(--cyan)';
+  const tn=document.getElementById('t-num');
+  tn.textContent=s; tn.style.color=s<=5?'var(--red)':'var(--txt)';
+}
+function pick(i, q, qi) {
+  if(myAns!==null) return; myAns=i;
+  document.querySelectorAll('.ans-btn').forEach(b=>b.disabled=true);
+  document.querySelectorAll('.ans-btn')[i].classList.add('selected');
+  const ok=i===q.c, pts=ok?100:0;
+  myScore+=pts; myLog[`q${qi}`]={answer:i,correct:ok,points:pts};
+  update(ref(db,`quiz/players/${myId}`),{score:myScore,[`answers/q${qi}`]:{answer:i,correct:ok,points:pts}});
+  hud();
+}
+
+// REVIEW
+function renderRv(s) {
+  clearInterval(tmrIv);
+  const q=Q[s.currentQuestion], ok=myAns!==null&&myAns===q.c, ans=myAns!==null;
+  const key=`q${s.currentQuestion}`;
+  if(!myLog[key]) myLog[key]={answer:null,correct:false,points:0};
+  document.getElementById('rv-icon').textContent  = !ans?'⏰':ok?'✅':'❌';
+  document.getElementById('rv-title').textContent = !ans?'ЧАС ВИЙШОВ!':ok?'ПРАВИЛЬНО!':'НЕПРАВИЛЬНО!';
+  document.getElementById('rv-sub').textContent   = `Правильна відповідь: ${q.a[q.c]}`;
+  const pe=document.getElementById('rv-pts');
+  pe.textContent=ok?'+100':'+0'; pe.style.color=ok?'var(--grn)':'var(--red)';
+  document.getElementById('rv-tot').textContent=myScore;
+  show('review');
+}
+
+// LEADERBOARD helper
+function renderLb(listId, s) {
+  const sorted=Object.entries(s.players||{}).map(([id,p])=>({...p,id})).sort((a,b)=>b.score-a.score).slice(0,10);
+  const el=document.getElementById(listId); el.innerHTML='';
+  sorted.forEach((p,i)=>{
+    const row=document.createElement('div');
+    row.className=`lb-row r${i+1}${p.id===myId?' me':''}`;
+    row.style.animationDelay=`${i*.06}s`;
+    row.innerHTML=`<div class="lb-rank">${M[i]||(i+1)}</div>
+      <div class="lb-name">${esc(p.name)}${p.id===myId?' <span style="color:var(--cyan);font-size:.72rem">← ти</span>':''}</div>
+      <div class="lb-score">${p.score}</div>`;
+    el.appendChild(row);
+  });
+}
+
+// FINISHED
+function renderFinished(s) {
+  renderLb('lb-fin', s);
+
+  // stats
+  const ok=Object.values(myLog).filter(x=>x.correct).length;
+  const ng=Object.values(myLog).filter(x=>!x.correct&&x.answer!==null).length;
+  const sk=Q.length-ok-ng;
+  document.getElementById('fin-sc').textContent  = myScore;
+  document.getElementById('fin-max').textContent = Q.length*100;
+  document.getElementById('fin-ok').textContent  = ok;
+  document.getElementById('fin-ng').textContent  = ng;
+  document.getElementById('fin-sk').textContent  = sk;
+
+  // answers review
+  const list=document.getElementById('arv-list'); list.innerHTML='';
+  Q.forEach((q,i)=>{
+    const log=myLog[`q${i}`]||{answer:null,correct:false};
+    const cls=log.answer===null?'sk':log.correct?'ok':'ng';
+    const icon=log.answer===null?'⏰':log.correct?'✅':'❌';
+    const item=document.createElement('div');
+    item.className=`arv-item ${cls}`;
+    const optsHtml=q.a.map((ans,ai)=>{
+      let c='';
+      if(ai===q.c) c+=' is-correct';
+      if(ai===log.answer&&!log.correct) c+=' is-mine-wrong';
+      const badge=ai===q.c?'<span class="badge">✓ правильна</span>':
+                  (ai===log.answer&&!log.correct)?'<span class="badge">← моя</span>':'';
+      return `<div class="arv-opt${c}">${esc(ans)}${badge}</div>`;
+    }).join('');
+    item.innerHTML=`<div class="arv-num">${icon} ПИТАННЯ ${i+1}</div>
+      <div class="arv-q">${esc(q.text)}</div>
+      <div class="arv-opts">${optsHtml}</div>`;
+    list.appendChild(item);
+  });
+
+  show('finished');
+}
+
+// ADMIN live lb
+function renderAdmLb(players) {
+  const s=Object.values(players).sort((a,b)=>b.score-a.score).slice(0,5);
+  const el=document.getElementById('adm-lb'); el.innerHTML='';
+  s.forEach((p,i)=>{
+    const r=document.createElement('div'); r.className='adm-lb-row';
+    r.innerHTML=`<div class="adm-lb-rank">${M[i]||(i+1)}</div>
+      <div class="adm-lb-name">${esc(p.name)}</div>
+      <div class="adm-lb-score">${p.score}</div>`;
+    el.appendChild(r);
+  });
+}
+
+function updAdm(s) {
+  const sm={idle:'—',waiting:'Очікування',active:'Питання',review:'Огляд',leaderboard:'Рейтинг',finished:'Завершено'};
+  document.getElementById('adm-st').textContent=sm[s.status]||s.status;
+  document.getElementById('adm-qi').textContent=
+    ['active','review','leaderboard'].includes(s.status)?`${(s.currentQuestion||0)+1}/${Q.length}`:'—';
+  const going=['active','review','leaderboard'].includes(s.status);
+  document.getElementById('adm-start').style.display=going?'none':'block';
+  document.getElementById('adm-next').style.display=going?'block':'none';
+  document.getElementById('adm-next').textContent=
+    s.status==='active'?'⏭ Закрити питання':
+    s.status==='review'?'📊 Рейтинг / наступне':'▶ Наступне питання';
+}
+
+window.adminStart = async()=>{ await update(ref(db,'quiz'),{status:'active',currentQuestion:0,questionStartedAt:Date.now()}); };
+
+window.adminNext = async()=>{
+  const s=qstate; if(!s) return;
+  if(s.status==='active'){ await update(ref(db,'quiz'),{status:'review'}); return; }
+  if(s.status==='review'){
+    const qi=s.currentQuestion;
+    const players=(await get(ref(db,'quiz/players'))).val()||{};
+    const last=qi+1>=Q.length, lb=last||(qi+1)%3===0;
+    await update(ref(db,'quiz'), lb
+      ? {status:last?'finished':'leaderboard', players}
+      : {status:'active',currentQuestion:qi+1,questionStartedAt:Date.now()});
+    return;
+  }
+  if(s.status==='leaderboard'){
+    const qi=s.currentQuestion;
+    if(qi+1>=Q.length){
+      const players=(await get(ref(db,'quiz/players'))).val()||{};
+      await update(ref(db,'quiz'),{status:'finished',players});
+    } else {
+      await update(ref(db,'quiz'),{status:'active',currentQuestion:qi+1,questionStartedAt:Date.now()});
+    }
+  }
+};
+
+window.adminReset = async()=>{
+  if(!confirm('Скинути весь квіз та всіх гравців?')) return;
+  myLog={}; myScore=0; hud();
+  await set(ref(db,'quiz'),{status:'waiting',currentQuestion:0});
+};
+
+// INIT
+(async()=>{
+  if(isAdmin){
+    document.getElementById('adm').classList.add('on');
+    show('waiting');
+    if(!(await get(ref(db,'quiz/status'))).exists())
+      await set(ref(db,'quiz'),{status:'waiting',currentQuestion:0});
+    listen(); return;
+  }
+  const sid=sessionStorage.getItem('qid'), sn=sessionStorage.getItem('qname');
+  if(sid&&sn){
+    myId=sid; myName=sn;
+    const snap=await get(ref(db,`quiz/players/${myId}`));
+    if(snap.exists()){ myScore=snap.val().score||0; Object.assign(myLog,snap.val().answers||{}); }
+    hud(); show('waiting'); listen();
+  }
+})();
+</script>
+</body>
+</html>
