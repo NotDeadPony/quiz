@@ -504,6 +504,17 @@
       <div class="rv-pts" id="rv-pts">+0</div>
       <div class="rv-pts-lbl">Мій рахунок: <span id="rv-tot">0</span></div>
     </div>
+    <!-- Review countdown timer -->
+    <div style="display:flex;align-items:center;gap:10px;margin-top:16px;color:var(--ink3);font-size:.8rem">
+      <div style="position:relative;width:36px;height:36px;flex-shrink:0">
+        <svg width="36" height="36" viewBox="0 0 36 36" style="transform:rotate(-90deg)">
+          <circle fill="none" stroke="var(--brd)" stroke-width="3" cx="18" cy="18" r="14" stroke-dasharray="87.96"/>
+          <circle fill="none" stroke="var(--cb)" stroke-width="3" stroke-linecap="round" cx="18" cy="18" r="14" stroke-dasharray="87.96" id="rv-timer-fg" stroke-dashoffset="0" style="transition:stroke-dashoffset .5s linear"/>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:.9rem;font-weight:700;color:var(--cb)" id="rv-timer-num">8</div>
+      </div>
+      <span id="rv-timer-lbl">Наступне питання...</span>
+    </div>
   </div>
 
   <div class="screen top" id="screen-leaderboard" style="padding-top:28px">
@@ -662,7 +673,8 @@
 <!-- ══════════════════════════════ SETTINGS VIEW (?settings) ══ -->
 <div id="settings-view">
   <div class="st-nav">
-    <div class="st-brand">⚙️ Налаштування</div>
+    <button class="st-btn st-btn-editor" onclick="location.href='?admin'" style="width:auto;padding:8px 16px">← Проектор</button>
+    <div class="st-brand" style="flex:1;text-align:center">⚙️ Налаштування</div>
     <span style="font-size:.72rem;color:var(--ink3)">ФКІСІТ КНЕУ</span>
   </div>
   <div class="st-body">
@@ -723,6 +735,8 @@
           </div>
         </div>
       </div>
+      <button class="st-btn st-btn-start" id="st-save-timers" onclick="saveTimers()" style="margin-top:8px">💾 Зберегти таймери</button>
+      <div id="st-save-msg" style="font-size:.75rem;color:var(--cd);text-align:center;min-height:18px;margin-top:4px"></div>
     </div>
 
     <!-- Waiting players list -->
@@ -987,7 +1001,6 @@ function pick(i,q,qi){
 }
 function renderRv(s){
   clearInterval(plyrTmrIv);
-  // Hide the local "next question in Xs" label
   const wl=document.getElementById('q-waiting-lbl');
   if(wl){ wl.style.display='none'; const sp=wl.querySelector('span'); if(sp) sp.textContent=''; }
   const q=Q[s.currentQuestion]; const log=myLog[`q${s.currentQuestion}`]||{answer:null,correct:false,points:0};
@@ -1002,6 +1015,24 @@ function renderRv(s){
   pe.textContent=ok?`+${log.points}`:'+0'; pe.style.color=ok?'var(--cd)':'rgba(255,255,255,.35)';
   document.getElementById('rv-tot').textContent=myScore;
   pshow('review');
+
+  // Review timer — reads reviewStartedAt dynamically from qstate every tick
+  const dur=reviewTime;
+  function calcRvRem(){
+    const st=qstate?.reviewStartedAt;
+    if(!st||typeof st!=='number') return dur;
+    return Math.max(0, dur-Math.floor((serverNow()-st)/1000));
+  }
+  function tickRv(rem){
+    const C=87.96, r=rem/dur;
+    document.getElementById('rv-timer-fg').style.strokeDashoffset=C*(1-r);
+    document.getElementById('rv-timer-num').textContent=rem;
+    document.getElementById('rv-timer-lbl').textContent=rem>0?`Наступне питання через ${rem}с`:'Завантаження...';
+  }
+  tickRv(calcRvRem());
+  plyrTmrIv=setInterval(()=>{
+    const rem=calcRvRem(); tickRv(rem);
+  },500);
 }
 function renderLb(listId,s){
   const sorted=Object.entries(s.players||{}).map(([id,p])=>({...p,id})).filter(p=>p&&p.name).sort((a,b)=>b.score-a.score).slice(0,10);
@@ -1217,6 +1248,17 @@ function renderProjAnalysis(players){
 window.changeTime=(d,which)=>{
   if(which==='answer'){ adminTime=Math.min(120,Math.max(5,adminTime+d)); document.getElementById('st-atime').textContent=adminTime; }
   else { reviewTime=Math.min(30,Math.max(2,reviewTime+d)); document.getElementById('st-rtime').textContent=reviewTime; }
+};
+
+window.saveTimers=async()=>{
+  const btn=document.getElementById('st-save-timers');
+  const msg=document.getElementById('st-save-msg');
+  btn.disabled=true; msg.textContent='Зберігаємо...'; msg.style.color='var(--ink3)';
+  // Save to Firebase so all clients pick it up
+  await update(ref(db,'quiz'),{timePerQuestion:adminTime, reviewTime});
+  msg.textContent='✓ Збережено!'; msg.style.color='var(--cd)';
+  btn.disabled=false;
+  setTimeout(()=>{ msg.textContent=''; },2500);
 };
 
 let stTmrIv=null, stLastSt='';
