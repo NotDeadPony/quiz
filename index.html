@@ -968,7 +968,7 @@ function tickPlayer(s){
 }
 function pick(i,q,qi){
   if(myAns!==null)return; myAns=i;
-  clearInterval(plyrTmrIv); // stop timer, waiting for Firebase
+  // Don't stop timer — it keeps running in sync with server
   document.querySelectorAll('.ans-btn').forEach(b=>b.disabled=true);
   const ok=i===q.c;
   const elapsed=(serverNow()-(qstate?.questionStartedAt||serverNow()))/1000;
@@ -976,13 +976,7 @@ function pick(i,q,qi){
   const pts=ok?Math.max(100,Math.round(1000*ratio)):0;
   myScore+=pts; if(ok)myStars++;
   myLog[`q${qi}`]={answer:i,correct:ok,points:pts};
-  // Show correct/wrong visually
   document.querySelectorAll('.ans-btn').forEach((b,bi)=>{ if(bi===q.c)b.classList.add('correct'); else if(bi===i&&!ok)b.classList.add('wrong'); else b.classList.add('dim'); });
-  // Show waiting indicator
-  const wl=document.getElementById('q-waiting-lbl');
-  const sp=wl?.querySelector('span');
-  if(wl){ wl.style.display='flex'; if(sp) sp.textContent='Очікуємо результати...'; }
-  // Keep timer ring at current position (don't reset to 0)
   update(ref(db,`quiz/players/${myId}`),{score:myScore,stars:myStars,[`answers/q${qi}`]:{answer:i,correct:ok,points:pts}});
   setHud();
 }
