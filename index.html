@@ -809,10 +809,17 @@ const FB = {
   appId:"1:553541085533:web:429f25422a4fd500c6e0b4"
 };
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getDatabase, ref, set, get, push, update, onValue }
+import { getDatabase, ref, set, get, push, update, onValue, serverTimestamp }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 const fbApp = initializeApp(FB);
 const db    = getDatabase(fbApp);
+
+// ── Clock sync: correct client/server time drift ──────────────────────
+// Firebase provides the offset between client clock and server clock.
+// serverNow() gives the client's best estimate of the server's current time.
+let _timeOffset = 0;
+onValue(ref(db, '.info/serverTimeOffset'), snap => { _timeOffset = snap.val() || 0; });
+const serverNow = () => Date.now() + _timeOffset;
 
 const L=['A','B','C','D'], M=['🥇','🥈','🥉'];
 const params    = new URLSearchParams(location.search);
@@ -909,7 +916,7 @@ function renderQ(s){
   const grid=document.getElementById('q-grid'); grid.innerHTML='';
   q.a.forEach((ans,i)=>{ const b=document.createElement('button'); b.className='ans-btn'; b.setAttribute('data-c',i); b.innerHTML=`<div class="ans-letter">${L[i]}</div><div class="ans-text">${esc(ans)}</div>`; b.onclick=()=>pick(i,q,qi); grid.appendChild(b); });
   pshow('question');
-  const elapsed=Math.floor((Date.now()-(s.questionStartedAt||Date.now()))/1000);
+  const elapsed=Math.floor((serverNow()-(s.questionStartedAt||serverNow()))/1000);
   let rem=Math.max(0,adminTime-elapsed);
   tickPlayer(rem);
   plyrTmrIv=setInterval(()=>{
@@ -966,7 +973,7 @@ function pick(i,q,qi){
   if(myAns!==null)return; myAns=i;
   document.querySelectorAll('.ans-btn').forEach(b=>b.disabled=true);
   const ok=i===q.c;
-  const elapsed=(Date.now()-(qstate?.questionStartedAt||Date.now()))/1000;
+  const elapsed=(serverNow()-(qstate?.questionStartedAt||serverNow()))/1000;
   const ratio=Math.max(0,Math.min(1,1-elapsed/adminTime));
   const pts=ok?Math.max(100,Math.round(1000*ratio)):0;
   myScore+=pts; if(ok)myStars++;
@@ -1106,7 +1113,7 @@ function updProj(s){
 
       if(isActive){
         document.getElementById('proj-t-lbl').textContent='відповідь';
-        const elapsed=Math.floor((Date.now()-(s.questionStartedAt||Date.now()))/1000);
+        const elapsed=Math.floor((serverNow()-(s.questionStartedAt||serverNow()))/1000);
         let rem=Math.max(0,adminTime-elapsed);
         tickProj(rem,'answer');
         projTmrIv=setInterval(async ()=>{
@@ -1123,7 +1130,7 @@ function updProj(s){
       }
       if(isReview){
         document.getElementById('proj-t-lbl').textContent='до наступного';
-        const elapsed=Math.floor((Date.now()-(s.reviewStartedAt||Date.now()))/1000);
+        const elapsed=Math.floor((serverNow()-(s.reviewStartedAt||serverNow()))/1000);
         let rem=Math.max(0,reviewTime-elapsed);
         tickProj(rem,'review');
         get(ref(db,'quiz/players')).then(sn=>{ if(sn.exists()) renderProjDist(sn.val(),qi,q.c,true); });
@@ -1236,7 +1243,7 @@ function runSettingsTimer(s){
   const stateKey = s.status + '_' + (s.currentQuestion||0);
   if(s.status==='active' && stateKey !== stLastSt){
     stLastSt=stateKey; clearInterval(stTmrIv);
-    const elapsed=Math.floor((Date.now()-(s.questionStartedAt||Date.now()))/1000);
+    const elapsed=Math.floor((serverNow()-(s.questionStartedAt||serverNow()))/1000);
     let rem=Math.max(0,adminTime-elapsed);
     stTmrIv=setInterval(async ()=>{
       rem--;
@@ -1248,7 +1255,7 @@ function runSettingsTimer(s){
     },1000);
   } else if(s.status==='review' && stateKey !== stLastSt){
     stLastSt=stateKey; clearInterval(stTmrIv);
-    const elapsed=Math.floor((Date.now()-(s.reviewStartedAt||Date.now()))/1000);
+    const elapsed=Math.floor((serverNow()-(s.reviewStartedAt||serverNow()))/1000);
     let rem=Math.max(0,reviewTime-elapsed);
     stTmrIv=setInterval(async ()=>{
       rem--;
@@ -1292,7 +1299,7 @@ function renderStLb(players){
 // Admin actions
 window.adminStart=async()=>{
   projLastSt=''; projLastQ=-1; stLastSt='';
-  await update(ref(db,'quiz'),{status:'active',currentQuestion:0,questionStartedAt:Date.now(),timePerQuestion:adminTime,reviewTime});
+  await update(ref(db,'quiz'),{status:'active',currentQuestion:0,questionStartedAt:serverTimestamp(),timePerQuestion:adminTime,reviewTime});
 };
 // Same action available from projector Start button
 window.projAdminStart = ()=>adminStart();
@@ -1301,7 +1308,7 @@ window.adminClose=async()=>{
   const currentStatus = qstate?.status;
   if(currentStatus && currentStatus!=='active') return;
   clearInterval(projTmrIv);
-  await update(ref(db,'quiz'),{status:'review',reviewStartedAt:Date.now(),reviewTime});
+  await update(ref(db,'quiz'),{status:'review',reviewStartedAt:serverTimestamp(),reviewTime});
 };
 async function adminNextQ(){
   const s=qstate; if(!s)return;
@@ -1311,7 +1318,7 @@ async function adminNextQ(){
     const players=(await get(ref(db,'quiz/players'))).val()||{};
     await update(ref(db,'quiz'),{status:'finished',players});
   } else {
-    await update(ref(db,'quiz'),{status:'active',currentQuestion:qi+1,questionStartedAt:Date.now(),timePerQuestion:adminTime,reviewTime});
+    await update(ref(db,'quiz'),{status:'active',currentQuestion:qi+1,questionStartedAt:serverTimestamp(),timePerQuestion:adminTime,reviewTime});
   }
 }
 window.adminNextManual=()=>adminNextQ();
