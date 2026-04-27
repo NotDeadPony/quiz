@@ -3,648 +3,644 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>IT Квіз — Коледж ІСТ КНЕУ</title>
+  <title>IT Квіз — ФКІСІТ КНЕУ</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-
     :root {
-      --bg:      #F5F3EF;
-      --white:   #FFFFFF;
-      --ink:     #1A1A1A;
-      --ink2:    #4A4A4A;
-      --ink3:    #9A9A9A;
-      --brd:     #E2DED8;
-      --brd2:    #D0CBC2;
-
-      /* answer colors */
-      --ca: #E8355A; /* red */
-      --cb: #4563E8; /* blue */
-      --cc: #E8A020; /* amber */
-      --cd: #1DAB6E; /* green */
-
-      --ca-lt: #FDE8EC;
-      --cb-lt: #EAEDfd;
-      --cc-lt: #FEF4E3;
-      --cd-lt: #E4F7EF;
-
-      --radius: 16px;
+      --bg:    #F5F3EF;
+      --white: #FFFFFF;
+      --ink:   #1A1A1A;
+      --ink2:  #4A4A4A;
+      --ink3:  #9A9A9A;
+      --brd:   #E2DED8;
+      --brd2:  #C8C3BB;
+      --ca: #E8355A; --ca-lt: #FDE8EC;
+      --cb: #4563E8; --cb-lt: #EAEEfd;
+      --cc: #D4860A; --cc-lt: #FEF3E2;
+      --cd: #1DAB6E; --cd-lt: #E4F7EF;
+      --r: 14px;
       --serif: 'Playfair Display', Georgia, serif;
       --sans:  'DM Sans', sans-serif;
     }
-
     html { scroll-behavior:smooth; }
-
     body {
-      background: var(--bg);
-      color: var(--ink);
-      font-family: var(--sans);
-      min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      padding: 0;
-      position: relative;
+      background:var(--bg); color:var(--ink);
+      font-family:var(--sans); min-height:100dvh;
     }
 
-    /* subtle noise texture */
-    body::before {
-      content:'';
-      position:fixed; inset:0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
-      pointer-events:none; z-index:0;
+    /* ════════════════════════════════
+       PLAYER VIEW
+    ════════════════════════════════ */
+    #player-view {
+      display:flex; flex-direction:column;
+      align-items:center; min-height:100dvh;
     }
 
-    /* ── NAV ── */
     .nav {
-      width: 100%; max-width: 680px;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 18px 20px 0;
-      position: relative; z-index: 10;
+      width:100%; max-width:680px;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:16px 20px 0; flex-shrink:0;
     }
-    .nav-brand {
-      font-family: var(--serif);
-      font-size: 1.1rem; font-weight: 700;
-      color: var(--ink); letter-spacing: -.3px;
+    .nav-brand { font-family:var(--serif); font-size:1.05rem; font-weight:700; }
+    .nav-brand em { font-style:italic; color:var(--ca); }
+    .nav-tag { font-size:.68rem; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink3); }
+
+    /* HUD strip */
+    .hud-bar {
+      display:none; position:fixed; top:0; left:0; right:0; z-index:200;
+      justify-content:space-between; align-items:center;
+      padding:10px 18px;
+      background:rgba(245,243,239,.92); backdrop-filter:blur(10px);
+      border-bottom:1px solid var(--brd);
     }
-    .nav-brand span { color: var(--ca); font-style: italic; }
-    .nav-tag {
-      font-size: .7rem; font-weight: 600;
-      letter-spacing: 1.5px; text-transform: uppercase;
-      color: var(--ink3);
+    .hud-bar.on { display:flex; }
+    .hud-left { display:flex; align-items:center; gap:8px; }
+    .hud-num  { font-size:.68rem; font-weight:700; letter-spacing:1px; color:var(--ink3); }
+    .hud-name { font-size:.85rem; font-weight:700; }
+    .hud-edit {
+      background:none; border:none; cursor:pointer;
+      font-size:.75rem; color:var(--ink3); padding:2px 6px;
+      border-radius:6px; transition:background .15s;
+    }
+    .hud-edit:hover { background:var(--brd); }
+    .hud-score { font-family:var(--serif); font-size:1.1rem; font-weight:700; }
+
+    /* Edit name popover */
+    .name-edit-overlay {
+      display:none; position:fixed; inset:0; z-index:300;
+      background:rgba(26,26,26,.5); backdrop-filter:blur(4px);
+      align-items:center; justify-content:center; padding:20px;
+    }
+    .name-edit-overlay.on { display:flex; }
+    .name-edit-box {
+      background:var(--white); border-radius:20px; padding:28px 24px;
+      width:100%; max-width:360px; box-shadow:0 20px 60px rgba(0,0,0,.2);
+    }
+    .name-edit-title {
+      font-family:var(--serif); font-size:1.4rem; font-weight:700; margin-bottom:16px;
     }
 
-    /* ── SCREENS ── */
+    /* Screens */
     .screen {
-      display: none; flex-direction: column;
-      align-items: center;
-      width: 100%; max-width: 680px;
-      padding: 24px 20px 40px;
-      position: relative; z-index: 1;
-      min-height: calc(100dvh - 60px);
-      justify-content: center;
+      display:none; flex-direction:column; align-items:center;
+      width:100%; max-width:680px; padding:24px 18px 48px;
+      position:relative; min-height:calc(100dvh - 52px);
+      justify-content:center;
     }
-    .screen.active { display: flex; animation: fadeUp .35s ease; }
-    .screen.top    { justify-content: flex-start; padding-top: 32px; }
+    .screen.active { display:flex; animation:fadeUp .35s ease; }
+    .screen.top    { justify-content:flex-start; padding-top:28px; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
 
-    @keyframes fadeUp {
-      from { opacity:0; transform:translateY(18px); }
-      to   { opacity:1; transform:translateY(0); }
-    }
-
-    /* ── HERO TITLE ── */
+    /* JOIN */
     .hero-title {
-      font-family: var(--serif);
-      font-size: clamp(2.6rem, 10vw, 3.8rem);
-      font-weight: 900; line-height: 1;
-      letter-spacing: -1px;
-      text-align: center;
-      margin-bottom: 8px;
+      font-family:var(--serif); font-size:clamp(2.8rem,10vw,4rem);
+      font-weight:900; line-height:1; letter-spacing:-1px;
+      text-align:center; margin-bottom:8px;
     }
-    .hero-title em { font-style: italic; color: var(--ca); }
-    .hero-sub {
-      font-size: .9rem; color: var(--ink2);
-      text-align: center; line-height: 1.6;
-      margin-bottom: 32px; max-width: 340px;
-    }
-
-    /* ── CARD ── */
-    .card {
-      background: var(--white);
-      border: 1px solid var(--brd);
-      border-radius: var(--radius);
-      padding: 24px 20px;
-      width: 100%;
-      box-shadow: 0 2px 12px rgba(0,0,0,.06);
-    }
-
-    /* ── FIELD ── */
-    .field-label {
-      display: block; font-size: .72rem; font-weight: 700;
-      letter-spacing: 1.5px; text-transform: uppercase;
-      color: var(--ink3); margin-bottom: 8px;
-    }
+    .hero-title em { font-style:italic; color:var(--ca); }
+    .hero-sub { font-size:.88rem; color:var(--ink2); text-align:center; line-height:1.6; margin-bottom:32px; max-width:320px; }
+    .card { background:var(--white); border:1px solid var(--brd); border-radius:var(--r); padding:24px 20px; width:100%; box-shadow:0 2px 12px rgba(0,0,0,.06); }
+    .field-label { display:block; font-size:.68rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink3); margin-bottom:8px; }
     input[type=text] {
-      width: 100%;
-      background: var(--bg); border: 1.5px solid var(--brd2);
-      border-radius: 12px; padding: 14px 16px;
-      font-size: 1rem; font-family: var(--sans); color: var(--ink);
-      outline: none; transition: border-color .2s, box-shadow .2s;
-      margin-bottom: 14px;
+      width:100%; background:var(--bg); border:1.5px solid var(--brd2);
+      border-radius:10px; padding:13px 15px; font-size:1rem;
+      font-family:var(--sans); color:var(--ink); outline:none;
+      transition:border-color .2s,box-shadow .2s; margin-bottom:12px;
     }
-    input[type=text]:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(26,26,26,.08); }
-    input[type=text]::placeholder { color: var(--ink3); }
-
-    /* ── BUTTONS ── */
+    input[type=text]:focus { border-color:var(--ink); box-shadow:0 0 0 3px rgba(26,26,26,.08); }
+    input[type=text]::placeholder { color:var(--ink3); }
     .btn {
-      display: block; width: 100%;
-      padding: 15px 24px; border: none; border-radius: 50px;
-      font-family: var(--sans); font-size: .95rem; font-weight: 700;
-      cursor: pointer; transition: transform .18s, box-shadow .18s, opacity .18s;
-      letter-spacing: .2px;
+      display:block; width:100%; padding:14px 24px; border:none; border-radius:50px;
+      font-family:var(--sans); font-size:.93rem; font-weight:700;
+      cursor:pointer; transition:transform .18s,box-shadow .18s,opacity .2s;
     }
     .btn:disabled { opacity:.4; cursor:not-allowed; transform:none!important; }
-    .btn-dark {
-      background: var(--ink); color: #fff;
-    }
+    .btn-dark { background:var(--ink); color:#fff; }
     .btn-dark:not(:disabled):hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,.18); }
-    .btn-outline {
-      background: transparent; border: 1.5px solid var(--brd2); color: var(--ink);
-      margin-top: 10px;
-    }
-    .btn-outline:hover { border-color: var(--ink); }
-    .btn-red { background: var(--ca); color: #fff; margin-top: 10px; }
-    .btn-red:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(232,53,90,.28); }
+    .btn-outline { background:transparent; border:1.5px solid var(--brd2); color:var(--ink); margin-top:8px; }
+    .btn-outline:hover { border-color:var(--ink); }
+    .btn-red { background:var(--ca); color:#fff; margin-top:8px; }
+    .error-msg { min-height:16px; color:var(--ca); font-size:.78rem; text-align:center; margin-bottom:8px; }
 
-    .error-msg { min-height: 16px; color: var(--ca); font-size: .8rem; text-align:center; margin-bottom: 10px; }
-
-    /* ── WAITING ── */
-    .wait-num {
-      font-family: var(--serif);
-      font-size: 5rem; font-weight: 900; line-height: 1;
-      color: var(--ink); text-align: center;
-    }
-    .wait-sub { color: var(--ink3); font-size: .85rem; text-align:center; margin-bottom: 28px; }
+    /* WAITING */
+    .w-pill { display:inline-block; background:var(--ca-lt); color:var(--ca); border-radius:50px; font-size:.7rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; padding:5px 14px; margin-bottom:18px; }
+    .wait-num { font-family:var(--serif); font-size:5rem; font-weight:900; text-align:center; line-height:1; }
+    .wait-sub { color:var(--ink3); font-size:.85rem; text-align:center; margin-bottom:24px; }
     .pulse-row { display:flex; align-items:center; justify-content:center; gap:8px; font-size:.82rem; color:var(--ink3); }
     .dot { width:7px; height:7px; border-radius:50%; background:var(--ca); animation:blink 1.4s infinite; }
     @keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.2;transform:scale(.7)} }
+    .player-id-badge { margin-top:20px; background:var(--white); border:1px solid var(--brd); border-radius:50px; padding:8px 20px; font-size:.82rem; color:var(--ink2); }
+    .player-id-badge strong { font-family:var(--serif); font-size:1rem; color:var(--ink); }
 
-    /* ── QUESTION SCREEN ── */
-    .q-header {
-      display: flex; justify-content: space-between; align-items: center;
-      width: 100%; margin-bottom: 20px;
-    }
-    .q-meta { display:flex; flex-direction:column; gap:2px; }
-    .q-num {
-      font-size: .7rem; font-weight: 700; letter-spacing: 1.5px;
-      text-transform: uppercase; color: var(--ink3);
-    }
-    .q-progress {
-      width: 120px; height: 4px; background: var(--brd);
-      border-radius: 2px; overflow: hidden;
-    }
-    .q-progress-fill {
-      height: 100%; background: var(--ink);
-      border-radius: 2px; transition: width .4s ease;
-    }
+    /* QUESTION */
+    .q-header { display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:16px; }
+    .q-meta { display:flex; flex-direction:column; gap:4px; }
+    .q-num { font-size:.68rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink3); }
+    .q-progress { width:100px; height:3px; background:var(--brd); border-radius:2px; overflow:hidden; }
+    .q-progress-fill { height:100%; background:var(--ink); border-radius:2px; transition:width .4s ease; }
 
-    /* Timer */
-    .timer-wrap { position:relative; width:54px; height:54px; flex-shrink:0; }
+    .timer-wrap { position:relative; width:50px; height:50px; flex-shrink:0; }
     .timer-wrap svg { transform:rotate(-90deg); }
     .timer-wrap circle { fill:none; stroke-width:4; }
-    .t-bg  { stroke: var(--brd); }
-    .t-fg  { stroke: var(--ink); stroke-linecap:round; transition: stroke-dashoffset 1s linear, stroke .3s; }
-    .t-num {
-      position:absolute; inset:0;
-      display:flex; align-items:center; justify-content:center;
-      font-family: var(--serif); font-size: 1.3rem; font-weight:700;
-    }
+    .t-bg { stroke:var(--brd); }
+    .t-fg { stroke:var(--ink); stroke-linecap:round; transition:stroke-dashoffset 1s linear,stroke .3s; }
+    .t-num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-size:1.25rem; font-weight:700; }
 
-    .q-text {
-      font-family: var(--serif);
-      font-size: clamp(1.1rem, 4.5vw, 1.45rem);
-      font-weight: 700; line-height: 1.4;
-      text-align: center; margin-bottom: 24px;
-      min-height: 70px;
-    }
+    /* Question image */
+    .q-img-wrap { width:100%; border-radius:12px; overflow:hidden; margin-bottom:14px; aspect-ratio:16/7; background:var(--brd); position:relative; }
+    .q-img-wrap img { width:100%; height:100%; object-fit:cover; display:block; transition:opacity .4s; }
+    .q-img-wrap::after { content:''; position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,.25) 0%, transparent 50%); }
 
-    /* Answer grid — 2 cols on mobile */
-    .ans-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px; width: 100%;
-    }
+    .q-text { font-family:var(--serif); font-size:clamp(1rem,4vw,1.35rem); font-weight:700; line-height:1.4; text-align:center; margin-bottom:20px; }
+
+    .ans-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; width:100%; }
     .ans-btn {
-      position: relative;
-      padding: 0; border: none; border-radius: 14px;
-      font-family: var(--sans); font-size: .88rem; font-weight: 700;
-      cursor: pointer; transition: transform .15s, box-shadow .15s, opacity .2s;
-      text-align: left; line-height: 1.3;
-      min-height: 84px;
-      display: flex; flex-direction: column; justify-content: space-between;
-      overflow: hidden;
+      position:relative; border:none; border-radius:12px;
+      font-family:var(--sans); cursor:pointer;
+      transition:transform .15s,box-shadow .15s,opacity .2s;
+      text-align:left; display:flex; flex-direction:column;
+      justify-content:space-between; min-height:78px; overflow:hidden;
     }
-    .ans-btn:not(:disabled):hover { transform:scale(1.03); box-shadow:0 6px 20px rgba(0,0,0,.12); }
-    .ans-btn:disabled { cursor:not-allowed; opacity:.7; }
+    .ans-btn:not(:disabled):hover { transform:scale(1.03); box-shadow:0 6px 20px rgba(0,0,0,.1); }
+    .ans-btn:disabled { cursor:not-allowed; }
+    .ans-letter { font-size:.65rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; padding:9px 11px 0; opacity:.7; }
+    .ans-text   { padding:0 11px 11px; font-size:.86rem; font-weight:700; line-height:1.3; }
+    .ans-btn[data-c="0"] { background:var(--ca-lt); color:var(--ca); }
+    .ans-btn[data-c="1"] { background:var(--cb-lt); color:var(--cb); }
+    .ans-btn[data-c="2"] { background:var(--cc-lt); color:var(--cc); }
+    .ans-btn[data-c="3"] { background:var(--cd-lt); color:var(--cd); }
+    .ans-btn.selected[data-c="0"] { background:var(--ca); color:#fff; }
+    .ans-btn.selected[data-c="1"] { background:var(--cb); color:#fff; }
+    .ans-btn.selected[data-c="2"] { background:var(--cc); color:#fff; }
+    .ans-btn.selected[data-c="3"] { background:var(--cd); color:#fff; }
+    .ans-btn.correct { background:var(--cd)!important; color:#fff!important; box-shadow:0 0 0 3px rgba(29,171,110,.3); }
+    .ans-btn.wrong   { background:var(--ca)!important; color:#fff!important; opacity:.6; }
+    .ans-btn.dim     { opacity:.3; }
 
-    .ans-letter {
-      font-size: .7rem; font-weight: 700; letter-spacing: 1px;
-      text-transform: uppercase; padding: 10px 12px 0; opacity: .65;
-    }
-    .ans-text {
-      padding: 0 12px 12px; font-size: .88rem; line-height: 1.3;
-    }
-
-    /* Color variants */
-    .ans-btn[data-c="0"] { background: var(--ca-lt); color: var(--ca); }
-    .ans-btn[data-c="1"] { background: var(--cb-lt); color: var(--cb); }
-    .ans-btn[data-c="2"] { background: var(--cc-lt); color: #b87200; }
-    .ans-btn[data-c="3"] { background: var(--cd-lt); color: #158552; }
-
-    .ans-btn[data-c="0"]:not(:disabled):hover { background: #fbd0d9; }
-    .ans-btn[data-c="1"]:not(:disabled):hover { background: #d8ddfb; }
-    .ans-btn[data-c="2"]:not(:disabled):hover { background: #fde9c0; }
-    .ans-btn[data-c="3"]:not(:disabled):hover { background: #c8f0dd; }
-
-    .ans-btn.selected[data-c="0"] { background: var(--ca); color: #fff; }
-    .ans-btn.selected[data-c="1"] { background: var(--cb); color: #fff; }
-    .ans-btn.selected[data-c="2"] { background: var(--cc); color: #fff; }
-    .ans-btn.selected[data-c="3"] { background: var(--cd); color: #fff; }
-
-    .ans-btn.correct { background: var(--cd) !important; color: #fff !important; box-shadow:0 0 0 3px #1dab6e55; }
-    .ans-btn.wrong   { background: var(--ca) !important; color: #fff !important; opacity:.7; }
-    .ans-btn.dim     { opacity: .35; }
-
-    /* ── REVIEW ── */
-    .rv-badge {
-      display: inline-flex; align-items:center; gap:6px;
-      font-size: .75rem; font-weight: 700; letter-spacing:1px;
-      text-transform: uppercase; padding: 6px 14px;
-      border-radius: 50px; margin-bottom: 16px;
-    }
-    .rv-badge.ok  { background: var(--cd-lt); color: #158552; }
-    .rv-badge.ng  { background: var(--ca-lt); color: var(--ca); }
-    .rv-badge.sk  { background: #FFF3CD; color: #856404; }
-
-    .rv-title {
-      font-family: var(--serif);
-      font-size: clamp(1.6rem, 7vw, 2.2rem);
-      font-weight: 900; margin-bottom: 6px; text-align:center;
-    }
-    .rv-correct {
-      font-size:.88rem; color:var(--ink2);
-      text-align:center; margin-bottom: 24px;
-    }
-    .rv-pts-wrap {
-      background: var(--ink); color: #fff;
-      border-radius: var(--radius); padding: 20px;
-      text-align:center; width:100%; margin-bottom: 12px;
-    }
-    .rv-pts {
-      font-family: var(--serif); font-size: 3.2rem; font-weight: 900;
-      line-height:1; animation: popIn .5s cubic-bezier(.17,.89,.32,1.27);
-    }
-    .rv-pts-lbl { font-size: .75rem; opacity:.55; margin-top:4px; letter-spacing:1px; text-transform:uppercase; }
+    /* REVIEW */
+    .rv-badge { display:inline-flex; align-items:center; gap:6px; font-size:.72rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; padding:5px 14px; border-radius:50px; margin-bottom:14px; }
+    .rv-badge.ok { background:var(--cd-lt); color:var(--cd); }
+    .rv-badge.ng { background:var(--ca-lt); color:var(--ca); }
+    .rv-badge.sk { background:var(--cc-lt); color:var(--cc); }
+    .rv-title { font-family:var(--serif); font-size:clamp(1.6rem,7vw,2.2rem); font-weight:900; margin-bottom:6px; text-align:center; }
+    .rv-sub   { font-size:.85rem; color:var(--ink2); text-align:center; margin-bottom:22px; }
+    .rv-pts-wrap { background:var(--ink); color:#fff; border-radius:var(--r); padding:20px; text-align:center; width:100%; }
+    .rv-pts { font-family:var(--serif); font-size:3rem; font-weight:900; line-height:1; animation:popIn .5s cubic-bezier(.17,.89,.32,1.27); }
+    .rv-pts-lbl { font-size:.72rem; opacity:.5; margin-top:4px; letter-spacing:1px; text-transform:uppercase; }
     @keyframes popIn { from{transform:scale(.2);opacity:0} to{transform:scale(1);opacity:1} }
 
-    /* ── LEADERBOARD ── */
-    .lb-title {
-      font-family: var(--serif);
-      font-size: 1.8rem; font-weight: 900;
-      text-align:center; margin-bottom: 18px;
-    }
-    .lb-list  { width:100%; display:flex; flex-direction:column; gap:8px; }
-    .lb-row {
-      display:flex; align-items:center; gap:12px;
-      padding: 13px 16px;
-      background: var(--white); border: 1px solid var(--brd);
-      border-radius: 12px;
-      animation: slideR .3s ease backwards;
-    }
-    .lb-row.r1 { border-left: 4px solid #F4C430; }
-    .lb-row.r2 { border-left: 4px solid #A8A9AD; }
-    .lb-row.r3 { border-left: 4px solid #CD7F32; }
-    .lb-row.me { background: #F0F4FF; border-color: var(--cb); }
-    @keyframes slideR { from{transform:translateX(-16px);opacity:0} to{transform:translateX(0);opacity:1} }
-    .lb-rank  { font-family:var(--serif); font-size:1.3rem; font-weight:700; width:30px; text-align:center; color:var(--ink3); }
-    .lb-row.r1 .lb-rank { color:#C9A800; }
-    .lb-row.r2 .lb-rank { color:#808080; }
-    .lb-row.r3 .lb-rank { color:#CD7F32; }
-    .lb-name  { flex:1; font-weight:600; font-size:.92rem; }
-    .lb-score { font-family:var(--serif); font-size:1.2rem; font-weight:700; color:var(--ink); }
+    /* LEADERBOARD */
+    .lb-title { font-family:var(--serif); font-size:1.7rem; font-weight:900; text-align:center; margin-bottom:16px; }
+    .lb-list  { width:100%; display:flex; flex-direction:column; gap:7px; }
+    .lb-row   { display:flex; align-items:center; gap:10px; padding:12px 14px; background:var(--white); border:1px solid var(--brd); border-radius:11px; animation:slideR .3s ease backwards; }
+    .lb-row.r1{border-left:4px solid #C9A800} .lb-row.r2{border-left:4px solid #808080} .lb-row.r3{border-left:4px solid #CD7F32}
+    .lb-row.me { background:#F0F4FF; border-color:var(--cb); }
+    @keyframes slideR { from{transform:translateX(-14px);opacity:0} to{transform:translateX(0);opacity:1} }
+    .lb-rank  { font-family:var(--serif); font-size:1.2rem; font-weight:700; width:28px; text-align:center; color:var(--ink3); flex-shrink:0; }
+    .lb-row.r1 .lb-rank{color:#C9A800} .lb-row.r2 .lb-rank{color:#808080} .lb-row.r3 .lb-rank{color:#CD7F32}
+    .lb-info  { flex:1; min-width:0; }
+    .lb-name  { font-weight:700; font-size:.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .lb-num   { font-size:.68rem; color:var(--ink3); letter-spacing:.5px; }
+    .lb-right { display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0; }
+    .lb-score { font-family:var(--serif); font-size:1.1rem; font-weight:700; }
+    .lb-stars { font-size:.72rem; color:var(--cc); letter-spacing:1px; }
 
-    /* ── TABS (finished) ── */
-    .tabs {
-      display:flex; width:100%; gap:6px;
-      margin-bottom: 16px;
-    }
-    .tab-btn {
-      flex:1; padding: 10px 6px; border: 1.5px solid var(--brd2);
-      border-radius: 50px; background: transparent; color:var(--ink2);
-      font-family:var(--sans); font-size:.8rem; font-weight:700;
-      cursor:pointer; transition:all .2s;
-    }
+    /* FINISHED TABS */
+    .tabs { display:flex; width:100%; gap:6px; margin-bottom:14px; }
+    .tab-btn { flex:1; padding:9px 4px; border:1.5px solid var(--brd2); border-radius:50px; background:transparent; color:var(--ink2); font-family:var(--sans); font-size:.78rem; font-weight:700; cursor:pointer; transition:all .2s; }
     .tab-btn.on { background:var(--ink); color:#fff; border-color:var(--ink); }
     .tab-pane { display:none; width:100%; }
     .tab-pane.on { display:block; }
-
-    /* My result */
-    .fin-hero {
-      background: var(--ink); color:#fff;
-      border-radius: var(--radius); padding: 28px 20px;
-      text-align:center; margin-bottom: 14px; width:100%;
-    }
-    .fin-score {
-      font-family:var(--serif); font-size:4rem; font-weight:900; line-height:1;
-    }
-    .fin-score-sub { font-size:.8rem; opacity:.5; margin:4px 0 18px; letter-spacing:1px; text-transform:uppercase; }
-    .fin-stats { display:flex; justify-content:center; gap:24px; }
+    .fin-hero { background:var(--ink); color:#fff; border-radius:var(--r); padding:26px 20px; text-align:center; margin-bottom:12px; width:100%; }
+    .fin-score { font-family:var(--serif); font-size:3.8rem; font-weight:900; line-height:1; }
+    .fin-score-sub { font-size:.75rem; opacity:.5; margin:4px 0 16px; letter-spacing:1px; text-transform:uppercase; }
+    .fin-stats { display:flex; justify-content:center; gap:22px; }
     .stat-item { text-align:center; }
-    .stat-val  { font-family:var(--serif); font-size:1.8rem; font-weight:700; }
-    .stat-lbl  { font-size:.68rem; opacity:.55; letter-spacing:1px; text-transform:uppercase; }
-
-    /* answers review */
-    .arv-list { display:flex; flex-direction:column; gap:10px; width:100%; }
-    .arv-item { background:var(--white); border:1px solid var(--brd); border-radius:14px; padding:14px 16px; }
-    .arv-item.ok { border-left: 4px solid var(--cd); }
-    .arv-item.ng { border-left: 4px solid var(--ca); }
-    .arv-item.sk { border-left: 4px solid var(--cc); }
-    .arv-num  { font-size:.68rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--ink3); margin-bottom:6px; }
-    .arv-q    { font-family:var(--serif); font-size:.95rem; font-weight:700; line-height:1.4; margin-bottom:10px; }
-    .arv-opts { display:flex; flex-direction:column; gap:5px; }
-    .arv-opt  { padding:7px 12px; border-radius:8px; font-size:.82rem; font-weight:500; background:var(--bg); color:var(--ink2); }
-    .arv-opt.is-correct    { background:var(--cd-lt); color:#158552; font-weight:700; }
+    .stat-val { font-family:var(--serif); font-size:1.7rem; font-weight:700; }
+    .stat-lbl { font-size:.65rem; opacity:.5; letter-spacing:1px; text-transform:uppercase; }
+    .arv-list { display:flex; flex-direction:column; gap:9px; width:100%; }
+    .arv-item { background:var(--white); border:1px solid var(--brd); border-radius:12px; padding:13px 15px; }
+    .arv-item.ok{border-left:4px solid var(--cd)} .arv-item.ng{border-left:4px solid var(--ca)} .arv-item.sk{border-left:4px solid var(--cc)}
+    .arv-num { font-size:.65rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--ink3); margin-bottom:5px; }
+    .arv-q   { font-family:var(--serif); font-size:.9rem; font-weight:700; line-height:1.4; margin-bottom:8px; }
+    .arv-opts{ display:flex; flex-direction:column; gap:4px; }
+    .arv-opt { padding:6px 11px; border-radius:7px; font-size:.8rem; font-weight:500; background:var(--bg); color:var(--ink2); }
+    .arv-opt.is-correct    { background:var(--cd-lt); color:var(--cd); font-weight:700; }
     .arv-opt.is-mine-wrong { background:var(--ca-lt); color:var(--ca); font-weight:700; }
-    .arv-opt .badge { font-size:.7rem; margin-left:6px; opacity:.8; }
+    .arv-opt .badge { font-size:.68rem; margin-left:5px; }
 
-    /* ── HUD ── */
-    .hud-bar {
-      position:fixed; top:0; left:0; right:0; z-index:100;
-      display:none;
-      justify-content:space-between; align-items:center;
-      padding: 12px 20px;
-      background: rgba(245,243,239,.9);
-      backdrop-filter: blur(8px);
-      border-bottom: 1px solid var(--brd);
+    /* ════════════════════════════════
+       ADMIN VIEW (full screen)
+    ════════════════════════════════ */
+    #admin-view {
+      display:none; min-height:100dvh;
+      flex-direction:column; background:var(--bg);
     }
-    .hud-bar.on { display:flex; }
-    .hud-name { font-size:.82rem; font-weight:600; color:var(--ink); }
-    .hud-score-wrap { display:flex; align-items:center; gap:6px; }
-    .hud-score-val {
-      font-family:var(--serif); font-size:1.1rem; font-weight:700; color:var(--ink);
-    }
-    .hud-score-lbl { font-size:.7rem; color:var(--ink3); }
+    #admin-view.on { display:flex; }
 
-    /* ── ADMIN PANEL ── */
-    #adm {
-      display:none; position:fixed; bottom:16px; right:16px;
-      background: var(--white); border: 1.5px solid var(--ink);
-      border-radius: 18px; padding: 18px 18px; z-index:200; width:270px;
-      box-shadow: 4px 4px 0 var(--ink);
+    .adm-nav {
+      display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+      padding:12px 20px; background:var(--white);
+      border-bottom:1px solid var(--brd);
+      position:sticky; top:0; z-index:100;
     }
-    #adm.on { display:block; }
-    .adm-title {
-      font-family:var(--serif); font-size:1.1rem; font-weight:700;
-      margin-bottom:12px; display:flex; align-items:center; gap:6px;
+    .adm-nav-brand { font-family:var(--serif); font-size:1rem; font-weight:700; margin-right:8px; }
+    .adm-nav-brand em { font-style:italic; color:var(--ca); }
+    .adm-status {
+      font-size:.68rem; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+      color:var(--ink3); padding:4px 10px; background:var(--bg); border-radius:50px; border:1px solid var(--brd);
     }
-    .adm-stat  { display:flex; justify-content:space-between; font-size:.78rem; color:var(--ink2); margin-bottom:5px; }
-    .adm-stat strong { color:var(--ink); font-weight:700; }
-    hr.adm-hr { border:none; border-top:1px solid var(--brd); margin:12px 0; }
+    .adm-btns { display:flex; gap:6px; margin-left:auto; flex-wrap:wrap; }
+    .adm-nb {
+      padding:8px 16px; border-radius:50px; border:none;
+      font-family:var(--sans); font-size:.8rem; font-weight:700;
+      cursor:pointer; transition:transform .15s,opacity .15s;
+    }
+    .adm-nb:hover { transform:translateY(-1px); }
+    .adm-nb.go    { background:var(--ink); color:#fff; }
+    .adm-nb.close { background:var(--cc); color:#fff; }
+    .adm-nb.lb    { background:var(--cb); color:#fff; }
+    .adm-nb.next  { background:var(--cd); color:#fff; }
+    .adm-nb.reset { background:transparent; border:1.5px solid var(--brd2); color:var(--ca); }
 
-    .time-ctrl { display:flex; align-items:center; gap:5px; }
-    .time-btn {
-      background: var(--bg); border: 1.5px solid var(--brd2); border-radius:8px;
-      color:var(--ink); font-family:var(--sans); font-size:.78rem; font-weight:700;
-      padding:5px 8px; cursor:pointer; transition:border-color .15s; flex-shrink:0;
+    .adm-body {
+      display:grid;
+      grid-template-columns:1fr 340px;
+      gap:16px; padding:16px 20px; flex:1;
     }
+    @media(max-width:900px){ .adm-body{ grid-template-columns:1fr; } }
+
+    /* Left panel: question */
+    .adm-question-panel {
+      background:var(--white); border:1px solid var(--brd);
+      border-radius:var(--r); padding:20px; display:flex; flex-direction:column; gap:14px;
+    }
+    .adm-q-header { display:flex; justify-content:space-between; align-items:center; }
+    .adm-q-meta { font-size:.7rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--ink3); }
+    .adm-q-progress { width:100%; height:3px; background:var(--brd); border-radius:2px; overflow:hidden; margin-top:6px; }
+    .adm-q-fill { height:100%; background:var(--ink); border-radius:2px; transition:width .4s; }
+
+    /* Admin timer */
+    .adm-timer { position:relative; width:70px; height:70px; flex-shrink:0; }
+    .adm-timer svg { transform:rotate(-90deg); }
+    .adm-timer circle { fill:none; stroke-width:5; }
+    .adm-t-bg { stroke:var(--brd); }
+    .adm-t-fg { stroke:var(--ink); stroke-linecap:round; transition:stroke-dashoffset 1s linear,stroke .3s; }
+    .adm-t-num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-size:1.6rem; font-weight:700; }
+
+    /* Admin time control */
+    .time-ctrl { display:flex; align-items:center; gap:4px; }
+    .time-ctrl-lbl { font-size:.65rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--ink3); margin-bottom:5px; }
+    .time-btn { background:var(--bg); border:1px solid var(--brd2); border-radius:7px; color:var(--ink); font-family:var(--sans); font-size:.75rem; font-weight:700; padding:5px 7px; cursor:pointer; transition:border-color .15s; }
     .time-btn:hover { border-color:var(--ink); }
-    .time-val {
-      flex:1; text-align:center; background:var(--bg);
-      border:1.5px solid var(--brd2); border-radius:8px; padding:5px 0;
-      font-family:var(--serif); font-size:1.2rem; font-weight:700; color:var(--ink);
+    .time-val { flex:1; text-align:center; background:var(--bg); border:1px solid var(--brd2); border-radius:7px; padding:5px 0; font-family:var(--serif); font-size:1.1rem; font-weight:700; }
+
+    .adm-img-wrap { width:100%; aspect-ratio:16/7; border-radius:10px; overflow:hidden; background:var(--brd); flex-shrink:0; }
+    .adm-img-wrap img { width:100%; height:100%; object-fit:cover; display:block; }
+
+    .adm-q-text { font-family:var(--serif); font-size:clamp(1rem,2vw,1.4rem); font-weight:700; line-height:1.45; }
+    .adm-q-text.dimmed { color:var(--ink3); }
+
+    /* Answer distribution */
+    .adm-dist { display:flex; flex-direction:column; gap:6px; }
+    .dist-row { display:flex; align-items:center; gap:8px; }
+    .dist-ltr { font-size:.75rem; font-weight:700; width:16px; flex-shrink:0; }
+    .dist-bar-track { flex:1; height:10px; background:var(--bg); border-radius:5px; overflow:hidden; }
+    .dist-bar { height:100%; border-radius:5px; transition:width .5s ease; min-width:0; }
+    .dist-bar.a0 { background:var(--ca); }
+    .dist-bar.a1 { background:var(--cb); }
+    .dist-bar.a2 { background:var(--cc); }
+    .dist-bar.a3 { background:var(--cd); }
+    .dist-bar.correct-bar { outline:2px solid var(--cd); }
+    .dist-cnt { font-size:.75rem; font-weight:700; width:18px; text-align:right; flex-shrink:0; }
+    .adm-answered-lbl { font-size:.72rem; color:var(--ink3); text-align:right; }
+
+    /* Right panel: leaderboard */
+    .adm-lb-panel {
+      background:var(--white); border:1px solid var(--brd);
+      border-radius:var(--r); padding:16px; display:flex; flex-direction:column;
+      max-height:calc(100dvh - 80px); overflow:hidden;
     }
-
-    .dist-row { display:flex; align-items:center; gap:6px; margin-bottom:5px; font-size:.76rem; }
-    .dist-ltr  { width:14px; font-weight:700; font-size:.8rem; color:var(--ink3); flex-shrink:0; }
-    .dist-bwrap{ flex:1; height:8px; background:var(--bg); border-radius:4px; overflow:hidden; }
-    .dist-bar  { height:100%; border-radius:4px; background:var(--ink3); transition:width .5s ease; }
-    .dist-bar.ok { background:var(--cd); }
-    .dist-cnt  { width:18px; text-align:right; color:var(--ink2); font-weight:700; font-size:.78rem; flex-shrink:0; }
-
-    .adm-lb { display:flex; flex-direction:column; gap:3px; }
-    .adm-lb-row { display:flex; align-items:center; gap:8px; font-size:.76rem; padding:3px 0; }
-    .adm-lb-rank { width:20px; text-align:center; font-weight:700; color:var(--ink3); font-size:.9rem; }
-    .adm-lb-name { flex:1; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .adm-lb-score{ font-family:var(--serif); font-size:.95rem; font-weight:700; }
-
-    .adm-btn {
-      display:block; width:100%; padding:11px;
-      border-radius: 50px; font-family:var(--sans); font-size:.84rem; font-weight:700;
-      cursor:pointer; margin-bottom:7px; transition:transform .15s, box-shadow .15s;
-      border: none;
+    .adm-lb-title { font-family:var(--serif); font-size:1.1rem; font-weight:700; margin-bottom:12px; }
+    .adm-lb-players-count { font-size:.72rem; color:var(--ink3); margin-bottom:10px; }
+    .adm-lb-list { display:flex; flex-direction:column; gap:6px; overflow-y:auto; flex:1; }
+    .adm-lb-row {
+      display:flex; align-items:center; gap:8px;
+      padding:9px 12px; border-radius:10px;
+      background:var(--bg); border:1px solid var(--brd);
+      transition:background .2s;
     }
-    .adm-btn:last-child { margin-bottom:0; }
-    .adm-btn:hover { transform:translateY(-1px); }
-    .adm-start { background:var(--ink); color:#fff; }
-    .adm-start:hover { box-shadow:0 6px 16px rgba(0,0,0,.2); }
-    .adm-close { background: var(--cc); color:#fff; }
-    .adm-lbtn  { background: var(--cb); color:#fff; }
-    .adm-next  { background: var(--cd); color:#fff; }
-    .adm-reset { background:transparent; border:1.5px solid var(--brd2); color:var(--ca); }
+    .adm-lb-row:first-child { background:#FFFBEA; border-color:#C9A800; }
+    .adm-lb-row:nth-child(2){ background:#F8F8F8; border-color:#B0B0B0; }
+    .adm-lb-row:nth-child(3){ background:#FFF4EC; border-color:#CD7F32; }
+    .adm-lb-rank { font-family:var(--serif); font-size:1rem; font-weight:700; width:22px; text-align:center; color:var(--ink3); flex-shrink:0; }
+    .adm-lb-info { flex:1; min-width:0; }
+    .adm-lb-name { font-weight:700; font-size:.82rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .adm-lb-pid  { font-size:.62rem; color:var(--ink3); letter-spacing:.5px; }
+    .adm-lb-right{ display:flex; flex-direction:column; align-items:flex-end; flex-shrink:0; gap:1px; }
+    .adm-lb-score{ font-family:var(--serif); font-size:1rem; font-weight:700; }
+    .adm-lb-stars{ font-size:.7rem; color:#C9A800; }
 
-    /* ── WAITING screen  ── */
-    .w-pill {
-      display:inline-block;
-      background: var(--ca-lt); color:var(--ca);
-      border-radius:50px; font-size:.72rem; font-weight:700;
-      letter-spacing:1px; text-transform:uppercase;
-      padding: 5px 14px; margin-bottom: 20px;
-    }
+    /* Waiting players list in admin */
+    .adm-players-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; overflow-y:auto; flex:1; align-content:start; }
+    .adm-player-chip { background:var(--bg); border:1px solid var(--brd); border-radius:10px; padding:10px 12px; }
+    .adm-player-chip-num { font-size:.65rem; color:var(--ink3); letter-spacing:1px; font-weight:700; }
+    .adm-player-chip-name { font-weight:700; font-size:.88rem; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-    /* ── MISC ── */
-    .text-center { text-align:center; }
-    .mb16 { margin-bottom:16px; }
-
-    @media (max-width:400px) {
+    @media(max-width:500px) {
       .ans-grid { grid-template-columns:1fr; }
-      .ans-btn  { min-height:64px; }
-      #adm { width:calc(100% - 28px); }
-    }
-    @media (min-width:520px) {
-      .nav, .screen { max-width:680px; }
+      .ans-btn  { min-height:62px; }
     }
   </style>
 </head>
 <body>
 
-<!-- NAV -->
-<nav class="nav">
-  <div class="nav-brand">IT <span>Квіз</span></div>
-  <div class="nav-tag">ФКІСІТ КНЕУ</div>
-</nav>
+<!-- ══════════════════════════════════════
+     PLAYER VIEW
+══════════════════════════════════════ -->
+<div id="player-view">
+  <nav class="nav">
+    <div class="nav-brand">IT <em>Квіз</em></div>
+    <div class="nav-tag">ФКІСІТ КНЕУ</div>
+  </nav>
 
-<!-- HUD (показується під час гри) -->
-<div class="hud-bar" id="hud-bar">
-  <div class="hud-name" id="hud-nv">—</div>
-  <div class="hud-score-wrap">
-    <div class="hud-score-val" id="hud-sv">0</div>
-    <div class="hud-score-lbl">балів</div>
-  </div>
-</div>
-
-<!-- ══ JOIN ══ -->
-<div class="screen active" id="screen-join">
-  <div class="hero-title">IT<br><em>Квіз</em></div>
-  <div class="hero-sub">Перевір чи знаєш яка IT-професія чим займається 🚀</div>
-  <div class="card" style="max-width:400px;width:100%">
-    <label class="field-label">Твоє ім'я</label>
-    <input type="text" id="inp-name" placeholder="Введи ім'я..." maxlength="20" autocomplete="off">
-    <div class="error-msg" id="join-err"></div>
-    <button class="btn btn-dark" onclick="handleJoin()">Приєднатись →</button>
-  </div>
-</div>
-
-<!-- ══ WAITING ══ -->
-<div class="screen" id="screen-waiting">
-  <div class="w-pill">● Очікування початку</div>
-  <div class="wait-num" id="wait-cnt">0</div>
-  <div class="wait-sub">учасників вже в грі</div>
-  <div class="pulse-row"><div class="dot"></div><span>Чекаємо викладача...</span></div>
-</div>
-
-<!-- ══ QUESTION ══ -->
-<div class="screen top" id="screen-question" style="padding-top:70px">
-  <div class="q-header">
-    <div class="q-meta">
-      <div class="q-num" id="q-lbl">Питання 1 / 12</div>
-      <div class="q-progress"><div class="q-progress-fill" id="q-prog"></div></div>
+  <!-- HUD -->
+  <div class="hud-bar" id="hud-bar">
+    <div class="hud-left">
+      <div class="hud-num" id="hud-num">#001</div>
+      <div class="hud-name" id="hud-nv">—</div>
+      <button class="hud-edit" onclick="openNameEdit()">✏️ змінити</button>
     </div>
-    <div class="timer-wrap">
-      <svg width="54" height="54" viewBox="0 0 54 54">
-        <circle class="t-bg" cx="27" cy="27" r="22" stroke-dasharray="138.2" stroke-dashoffset="0"/>
-        <circle class="t-fg" id="t-fg" cx="27" cy="27" r="22" stroke-dasharray="138.2" stroke-dashoffset="0"/>
-      </svg>
-      <div class="t-num" id="t-num">20</div>
+    <div class="hud-score" id="hud-sv">0 балів</div>
+  </div>
+
+  <!-- Name edit overlay -->
+  <div class="name-edit-overlay" id="name-edit-overlay">
+    <div class="name-edit-box">
+      <div class="name-edit-title">Змінити ім'я</div>
+      <label class="field-label">Нове ім'я</label>
+      <input type="text" id="inp-edit-name" placeholder="Введи ім'я..." maxlength="20">
+      <div class="error-msg" id="edit-err"></div>
+      <button class="btn btn-dark" onclick="saveNameEdit()">Зберегти</button>
+      <button class="btn btn-outline" onclick="closeNameEdit()">Скасувати</button>
     </div>
   </div>
-  <div class="q-text" id="q-txt"></div>
-  <div class="ans-grid" id="q-grid"></div>
-</div>
 
-<!-- ══ REVIEW ══ -->
-<div class="screen" id="screen-review">
-  <div class="rv-badge ok" id="rv-badge">✓ Правильно!</div>
-  <div class="rv-title" id="rv-title">Чудово!</div>
-  <div class="rv-correct" id="rv-sub"></div>
-  <div class="rv-pts-wrap">
-    <div class="rv-pts" id="rv-pts">+100</div>
-    <div class="rv-pts-lbl">Мій рахунок: <span id="rv-tot">0</span></div>
-  </div>
-</div>
-
-<!-- ══ LEADERBOARD ══ -->
-<div class="screen top" id="screen-leaderboard" style="padding-top:32px">
-  <div class="lb-title">🏆 Рейтинг</div>
-  <div class="lb-list" id="lb-mid"></div>
-</div>
-
-<!-- ══ FINISHED ══ -->
-<div class="screen top" id="screen-finished" style="padding-top:80px;justify-content:flex-start;overflow-y:auto;min-height:unset">
-  <div class="lb-title" style="margin-bottom:14px">🎉 Фінал!</div>
-  <div class="tabs">
-    <button class="tab-btn on" onclick="switchTab('t-me')">Мій результат</button>
-    <button class="tab-btn"   onclick="switchTab('t-lb')">Рейтинг</button>
-    <button class="tab-btn"   onclick="switchTab('t-ans')">Відповіді</button>
+  <!-- JOIN -->
+  <div class="screen active" id="screen-join">
+    <div class="hero-title">IT<br><em>Квіз</em></div>
+    <div class="hero-sub">Перевір чи знаєш яка IT-професія чим займається 🚀</div>
+    <div class="card" style="max-width:380px;width:100%">
+      <label class="field-label">Твоє ім'я</label>
+      <input type="text" id="inp-name" placeholder="Введи ім'я..." maxlength="20" autocomplete="off">
+      <div class="error-msg" id="join-err"></div>
+      <button class="btn btn-dark" onclick="handleJoin()">Приєднатись →</button>
+    </div>
   </div>
 
-  <div class="tab-pane on" id="t-me">
-    <div class="fin-hero">
-      <div class="fin-score" id="fin-sc">0</div>
-      <div class="fin-score-sub">балів із <span id="fin-max">0</span></div>
-      <div class="fin-stats">
-        <div class="stat-item">
-          <div class="stat-val" id="fin-ok">0</div>
-          <div class="stat-lbl">правильно</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-val" id="fin-ng">0</div>
-          <div class="stat-lbl">помилки</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-val" id="fin-sk">0</div>
-          <div class="stat-lbl">пропущено</div>
-        </div>
+  <!-- WAITING -->
+  <div class="screen" id="screen-waiting">
+    <div class="w-pill">● Очікування початку</div>
+    <div class="wait-num" id="wait-cnt">0</div>
+    <div class="wait-sub">учасників вже в грі</div>
+    <div class="pulse-row"><div class="dot"></div><span>Чекаємо викладача...</span></div>
+    <div class="player-id-badge" id="player-id-badge" style="display:none">
+      Твій номер: <strong id="player-id-num">#001</strong>
+    </div>
+  </div>
+
+  <!-- QUESTION -->
+  <div class="screen top" id="screen-question" style="padding-top:68px">
+    <div class="q-header">
+      <div class="q-meta">
+        <div class="q-num" id="q-lbl">Питання 1 / 12</div>
+        <div class="q-progress"><div class="q-progress-fill" id="q-prog"></div></div>
+      </div>
+      <div class="timer-wrap">
+        <svg width="50" height="50" viewBox="0 0 50 50">
+          <circle class="t-bg" cx="25" cy="25" r="20" stroke-dasharray="125.7" stroke-dashoffset="0"/>
+          <circle class="t-fg" id="t-fg" cx="25" cy="25" r="20" stroke-dasharray="125.7" stroke-dashoffset="0"/>
+        </svg>
+        <div class="t-num" id="t-num">20</div>
       </div>
     </div>
-    <p style="text-align:center;color:var(--ink3);font-size:.82rem;line-height:1.8">
-      Дякуємо за участь! 🚀<br>
-      <strong style="color:var(--ink)">ФКІСІТ КНЕУ</strong> чекає на тебе!
-    </p>
+    <div class="q-img-wrap" id="q-img-wrap">
+      <img id="q-img" src="" alt="" loading="lazy">
+    </div>
+    <div class="q-text" id="q-txt"></div>
+    <div class="ans-grid" id="q-grid"></div>
   </div>
 
-  <div class="tab-pane" id="t-lb">
-    <div class="lb-list" id="lb-fin"></div>
+  <!-- REVIEW -->
+  <div class="screen" id="screen-review">
+    <div class="rv-badge ok" id="rv-badge">✓ Правильно!</div>
+    <div class="rv-title" id="rv-title">Чудово!</div>
+    <div class="rv-sub"   id="rv-sub"></div>
+    <div class="rv-pts-wrap">
+      <div class="rv-pts" id="rv-pts">+0</div>
+      <div class="rv-pts-lbl">Мій рахунок: <span id="rv-tot">0</span></div>
+    </div>
   </div>
 
-  <div class="tab-pane" id="t-ans">
-    <div class="arv-list" id="arv-list"></div>
-  </div>
-</div>
-
-<!-- ══ ADMIN ══ -->
-<div id="adm">
-  <div class="adm-title">⚙ Адмін</div>
-  <div class="adm-stat">Учасники <strong id="adm-pl">0</strong></div>
-  <div class="adm-stat">Статус   <strong id="adm-st">—</strong></div>
-  <div class="adm-stat">Питання  <strong id="adm-qi">—</strong></div>
-
-  <hr class="adm-hr">
-  <div style="font-size:.68rem;color:var(--ink3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Час на питання</div>
-  <div class="time-ctrl">
-    <button class="time-btn" onclick="changeTime(-5)">−5</button>
-    <button class="time-btn" onclick="changeTime(-1)">−</button>
-    <div class="time-val"><span id="adm-time">20</span>с</div>
-    <button class="time-btn" onclick="changeTime(1)">+</button>
-    <button class="time-btn" onclick="changeTime(5)">+5</button>
+  <!-- LEADERBOARD -->
+  <div class="screen top" id="screen-leaderboard" style="padding-top:28px">
+    <div class="lb-title">🏆 Рейтинг</div>
+    <div class="lb-list" id="lb-mid"></div>
   </div>
 
-  <div id="adm-dist-wrap" style="display:none">
-    <hr class="adm-hr">
-    <div style="font-size:.68rem;color:var(--ink3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Відповіді гравців</div>
-    <div id="adm-dist"></div>
-    <div style="font-size:.7rem;color:var(--ink3);margin-top:5px">Відповіло: <strong id="adm-answered">0</strong> / <strong id="adm-total">0</strong></div>
+  <!-- FINISHED -->
+  <div class="screen top" id="screen-finished" style="padding-top:76px;justify-content:flex-start;min-height:unset;padding-bottom:60px">
+    <div class="lb-title" style="margin-bottom:12px">🎉 Фінал!</div>
+    <div class="tabs">
+      <button class="tab-btn on" onclick="switchTab('t-me')">Мій результат</button>
+      <button class="tab-btn"   onclick="switchTab('t-lb')">Рейтинг</button>
+      <button class="tab-btn"   onclick="switchTab('t-ans')">Відповіді</button>
+    </div>
+    <div class="tab-pane on" id="t-me">
+      <div class="fin-hero">
+        <div class="fin-score" id="fin-sc">0</div>
+        <div class="fin-score-sub">балів із <span id="fin-max">0</span></div>
+        <div class="fin-stats">
+          <div class="stat-item"><div class="stat-val" id="fin-ok">0</div><div class="stat-lbl">правильно</div></div>
+          <div class="stat-item"><div class="stat-val" id="fin-ng">0</div><div class="stat-lbl">помилки</div></div>
+          <div class="stat-item"><div class="stat-val" id="fin-sk">0</div><div class="stat-lbl">пропущено</div></div>
+        </div>
+      </div>
+      <p style="text-align:center;color:var(--ink3);font-size:.8rem;line-height:1.9">
+        Дякуємо за участь! 🚀<br>
+        <strong style="color:var(--ink)">ФКІСІТ КНЕУ</strong> чекає на тебе!
+      </p>
+    </div>
+    <div class="tab-pane" id="t-lb"><div class="lb-list" id="lb-fin"></div></div>
+    <div class="tab-pane" id="t-ans"><div class="arv-list" id="arv-list"></div></div>
+  </div>
+</div><!-- /player-view -->
+
+
+<!-- ══════════════════════════════════════
+     ADMIN VIEW
+══════════════════════════════════════ -->
+<div id="admin-view">
+
+  <!-- sticky nav with controls -->
+  <div class="adm-nav">
+    <div class="adm-nav-brand">IT <em>Квіз</em></div>
+    <div class="adm-status" id="adm-st">Очікування</div>
+    <span style="font-size:.72rem;color:var(--ink3)">Питання: <strong id="adm-qi">—</strong></span>
+    <span style="font-size:.72rem;color:var(--ink3)">Учасники: <strong id="adm-pl">0</strong></span>
+    <div class="adm-btns">
+      <button class="adm-nb go"    id="adm-start"   onclick="adminStart()">▶ Почати</button>
+      <button class="adm-nb close" id="adm-close"   onclick="adminClose()"   style="display:none">⏹ Закрити</button>
+      <button class="adm-nb lb"    id="adm-show-lb" onclick="adminShowLb()"  style="display:none">📊 Рейтинг</button>
+      <button class="adm-nb next"  id="adm-next-q"  onclick="adminNextQ()"   style="display:none">▶ Далі</button>
+      <button class="adm-nb reset" onclick="adminReset()">↺ Скинути</button>
+    </div>
   </div>
 
-  <hr class="adm-hr">
-  <div style="font-size:.68rem;color:var(--ink3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Live рейтинг</div>
-  <div class="adm-lb" id="adm-lb"></div>
+  <!-- body: question panel + leaderboard panel -->
+  <div class="adm-body">
 
-  <hr class="adm-hr">
-  <button class="adm-btn adm-start" id="adm-start"   onclick="adminStart()">▶ Почати квіз</button>
-  <button class="adm-btn adm-close" id="adm-close"   onclick="adminClose()"   style="display:none">⏹ Закрити питання</button>
-  <button class="adm-btn adm-lbtn"  id="adm-show-lb" onclick="adminShowLb()"  style="display:none">📊 Показати рейтинг</button>
-  <button class="adm-btn adm-next"  id="adm-next-q"  onclick="adminNextQ()"   style="display:none">▶ Наступне питання</button>
-  <button class="adm-btn adm-reset" onclick="adminReset()">↺ Скинути все</button>
-</div>
+    <!-- LEFT: question + timer + distribution -->
+    <div class="adm-question-panel">
+      <!-- Q header + timer row -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+        <div style="flex:1">
+          <div class="adm-q-meta" id="adm-q-lbl">Очікування учасників</div>
+          <div class="adm-q-progress"><div class="adm-q-fill" id="adm-q-prog" style="width:0%"></div></div>
+
+          <!-- Time control (shown only when waiting/idle) -->
+          <div id="adm-time-ctrl" style="margin-top:14px">
+            <div class="time-ctrl-lbl">Час на питання</div>
+            <div class="time-ctrl">
+              <button class="time-btn" onclick="changeTime(-5)">−5</button>
+              <button class="time-btn" onclick="changeTime(-1)">−</button>
+              <div class="time-val"><span id="adm-time">20</span>с</div>
+              <button class="time-btn" onclick="changeTime(1)">+</button>
+              <button class="time-btn" onclick="changeTime(5)">+5</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timer ring (shown during active) -->
+        <div class="adm-timer" id="adm-timer-wrap" style="display:none">
+          <svg width="70" height="70" viewBox="0 0 70 70">
+            <circle class="adm-t-bg" cx="35" cy="35" r="29" stroke-dasharray="182.2" stroke-dashoffset="0"/>
+            <circle class="adm-t-fg" id="adm-t-fg" cx="35" cy="35" r="29" stroke-dasharray="182.2" stroke-dashoffset="0"/>
+          </svg>
+          <div class="adm-t-num" id="adm-t-num">20</div>
+        </div>
+      </div>
+
+      <!-- Question image (hidden when waiting) -->
+      <div class="adm-img-wrap" id="adm-img-wrap" style="display:none">
+        <img id="adm-img" src="" alt="">
+      </div>
+
+      <!-- Question text -->
+      <div class="adm-q-text dimmed" id="adm-q-txt">Натисни «Почати» коли учасники готові</div>
+
+      <!-- Answer distribution -->
+      <div id="adm-dist-wrap" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:.68rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ink3)">Відповіді</span>
+          <span class="adm-answered-lbl">Відповіло: <strong id="adm-answered">0</strong> / <strong id="adm-total">0</strong></span>
+        </div>
+        <div class="adm-dist" id="adm-dist"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: live leaderboard -->
+    <div class="adm-lb-panel">
+      <div class="adm-lb-title">🏆 Live рейтинг</div>
+      <!-- Waiting: player chips grid -->
+      <div id="adm-waiting-players">
+        <div class="adm-lb-players-count" id="adm-waiting-lbl">Учасники з'являться тут</div>
+        <div class="adm-players-grid" id="adm-players-grid"></div>
+      </div>
+      <!-- Active/review: leaderboard -->
+      <div id="adm-lb-wrap" style="display:none">
+        <div class="adm-lb-list" id="adm-lb-list"></div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /admin-view -->
+
 
 <script type="module">
 // ─────────────────────────────────────────────
-// 📝 ПИТАННЯ
+// 📝 ПИТАННЯ + ЗОБРАЖЕННЯ
 // ─────────────────────────────────────────────
 const Q = [
-  { text:"🎨 Малює макети сайтів та додатків: підбирає кольори, шрифти і розташування елементів",
-    a:["Frontend-розробник","UX/UI дизайнер","DevOps-інженер","DBA"], c:1 },
-  { text:"🖥️ Верстає кнопки, меню та анімації — все що ти БАЧИШ очима на сайті",
-    a:["Backend-розробник","QA-інженер","Frontend-розробник","ML-інженер"], c:2 },
-  { text:"🔍 Навмисно «ламає» програму щоб знайти всі баги ДО того як її побачать користувачі",
-    a:["DevOps-інженер","QA-інженер (тестувальник)","Frontend-розробник","DBA"], c:1 },
-  { text:"🗄️ Пише логіку сервера — реєстрацію, платежі, збереження та обробку даних",
-    a:["Frontend-розробник","UX/UI дизайнер","Backend-розробник","System Admin"], c:2 },
-  { text:"📱 Розробляє додатки для смартфонів на iOS та Android",
-    a:["Mobile-розробник","Frontend-розробник","DevOps-інженер","Data Analyst"], c:0 },
-  { text:"🛡️ Шукає «дірки» в системі та захищає її від хакерів",
-    a:["DBA","QA-інженер","Cybersecurity-фахівець","System Admin"], c:2 },
-  { text:"📊 Аналізує мільйони рядків даних і будує прогнози та графіки для бізнесу",
-    a:["Backend-розробник","Data Scientist / Analyst","Mobile-розробник","DevOps-інженер"], c:1 },
-  { text:"⚙️ Налаштовує сервери так, щоб програма автоматично оновлювалась після кожного коміту",
-    a:["QA-інженер","Frontend-розробник","DBA","DevOps-інженер"], c:3 },
-  { text:"🗃️ Проектує та оптимізує бази даних — щоб мільйони записів знаходились за мілісекунди",
-    a:["System Admin","DBA (адмін баз даних)","Data Scientist","Mobile-розробник"], c:1 },
-  { text:"🌐 Налаштовує корпоративну мережу, роутери, VPN та доступи для співробітників",
-    a:["DevOps-інженер","Backend-розробник","Network / System Engineer","QA-інженер"], c:2 },
-  { text:"🤖 Навчає штучний інтелект розпізнавати фотографії та розуміти людську мову",
-    a:["Frontend-розробник","DBA","ML-інженер / AI-розробник","DevOps-інженер"], c:2 },
-  { text:"📦 Керує командою розробників, стежить за термінами та спілкується із замовником",
-    a:["QA-інженер","Project Manager / Scrum Master","DBA","System Admin"], c:1 }
+  {
+    text:"🎨 Малює макети сайтів та додатків: підбирає кольори, шрифти і розташування елементів",
+    img:"https://images.unsplash.com/photo-1561070791-2526d30994b5?w=700&q=75&fit=crop",
+    a:["Frontend-розробник","UX/UI дизайнер","DevOps-інженер","DBA"], c:1
+  },
+  {
+    text:"🖥️ Верстає кнопки, меню та анімації — все що ти БАЧИШ очима на сайті",
+    img:"https://images.unsplash.com/photo-1547658719-da2b51169166?w=700&q=75&fit=crop",
+    a:["Backend-розробник","QA-інженер","Frontend-розробник","ML-інженер"], c:2
+  },
+  {
+    text:"🔍 Навмисно «ламає» програму щоб знайти всі баги ДО того як її побачать користувачі",
+    img:"https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?w=700&q=75&fit=crop",
+    a:["DevOps-інженер","QA-інженер (тестувальник)","Frontend-розробник","DBA"], c:1
+  },
+  {
+    text:"🗄️ Пише логіку сервера — реєстрацію, платежі, збереження та обробку даних",
+    img:"https://images.unsplash.com/photo-1518432031352-d6fc5c10da5a?w=700&q=75&fit=crop",
+    a:["Frontend-розробник","UX/UI дизайнер","Backend-розробник","System Admin"], c:2
+  },
+  {
+    text:"📱 Розробляє додатки для смартфонів на iOS та Android",
+    img:"https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=700&q=75&fit=crop",
+    a:["Mobile-розробник","Frontend-розробник","DevOps-інженер","Data Analyst"], c:0
+  },
+  {
+    text:"🛡️ Шукає «дірки» в системі та захищає її від хакерів",
+    img:"https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=700&q=75&fit=crop",
+    a:["DBA","QA-інженер","Cybersecurity-фахівець","System Admin"], c:2
+  },
+  {
+    text:"📊 Аналізує мільйони рядків даних і будує прогнози та графіки для бізнесу",
+    img:"https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=700&q=75&fit=crop",
+    a:["Backend-розробник","Data Scientist / Analyst","Mobile-розробник","DevOps-інженер"], c:1
+  },
+  {
+    text:"⚙️ Налаштовує сервери так, щоб програма автоматично оновлювалась після кожного коміту",
+    img:"https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=700&q=75&fit=crop",
+    a:["QA-інженер","Frontend-розробник","DBA","DevOps-інженер"], c:3
+  },
+  {
+    text:"🗃️ Проектує та оптимізує бази даних — щоб мільйони записів знаходились за мілісекунди",
+    img:"https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=700&q=75&fit=crop",
+    a:["System Admin","DBA (адмін баз даних)","Data Scientist","Mobile-розробник"], c:1
+  },
+  {
+    text:"🌐 Налаштовує корпоративну мережу, роутери, VPN та доступи для співробітників",
+    img:"https://images.unsplash.com/photo-1586772002130-3d00c5a9fd86?w=700&q=75&fit=crop",
+    a:["DevOps-інженер","Backend-розробник","Network / System Engineer","QA-інженер"], c:2
+  },
+  {
+    text:"🤖 Навчає штучний інтелект розпізнавати фотографії та розуміти людську мову",
+    img:"https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=700&q=75&fit=crop",
+    a:["Frontend-розробник","DBA","ML-інженер / AI-розробник","DevOps-інженер"], c:2
+  },
+  {
+    text:"📦 Керує командою розробників, стежить за термінами та спілкується із замовником",
+    img:"https://images.unsplash.com/photo-1552664730-d307ca884978?w=700&q=75&fit=crop",
+    a:["QA-інженер","Project Manager / Scrum Master","DBA","System Admin"], c:1
+  }
 ];
 
 const DEFAULT_TIME = 20;
 let TIME = DEFAULT_TIME;
 
 // ─────────────────────────────────────────────
-// 🔥 FIREBASE CONFIG
+// 🔥 FIREBASE
 // ─────────────────────────────────────────────
 const FB = {
   apiKey:            "AIzaSyB5zani_mEj144G7wOffwrzTP_ec5RzrmA",
@@ -667,20 +663,18 @@ const L = ['A','B','C','D'];
 const M = ['🥇','🥈','🥉'];
 const isAdmin = new URLSearchParams(location.search).has('admin');
 
-let myId  = null, myName = '', myScore = 0;
-let myAns = null, myLog  = {};
-let tmrIv = null, qstate = null;
-let lastRenderedQ = -1;
+let myId    = null, myName = '', myScore = 0, myStars = 0, myNum = null;
+let myAns   = null, myLog  = {};
+let tmrIv   = null, qstate = null, lastRenderedQ = -1;
 let adminTime = DEFAULT_TIME;
 
-window.changeTime = (d) => {
-  adminTime = Math.min(60, Math.max(5, adminTime + d));
-  document.getElementById('adm-time').textContent = adminTime;
-};
+// ── helpers ──────────────────────────────────
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtNum(n){ return '#' + String(n).padStart(3,'0'); }
+function starsHtml(n){ return n > 0 ? '⭐'.repeat(Math.min(n,12)) : '—'; }
 
-// UI
-function show(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+function pshow(id) {
+  document.querySelectorAll('#player-view .screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + id).classList.add('active');
   window.scrollTo(0, 0);
 }
@@ -688,12 +682,31 @@ function show(id) {
 function setHud() {
   if (!myName) return;
   document.getElementById('hud-bar').classList.add('on');
+  document.getElementById('hud-num').textContent = myNum ? fmtNum(myNum) : '';
   document.getElementById('hud-nv').textContent  = myName;
-  document.getElementById('hud-sv').textContent  = myScore;
+  document.getElementById('hud-sv').textContent  = myScore + ' балів';
 }
 
-function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// ── Name editing ──────────────────────────────
+window.openNameEdit = () => {
+  document.getElementById('inp-edit-name').value = myName;
+  document.getElementById('edit-err').textContent = '';
+  document.getElementById('name-edit-overlay').classList.add('on');
+  setTimeout(() => document.getElementById('inp-edit-name').focus(), 100);
+};
+window.closeNameEdit = () => document.getElementById('name-edit-overlay').classList.remove('on');
+window.saveNameEdit  = async () => {
+  const newName = document.getElementById('inp-edit-name').value.trim();
+  const err = document.getElementById('edit-err');
+  if (newName.length < 2) { err.textContent = 'Мінімум 2 символи'; return; }
+  myName = newName;
+  await update(ref(db, `quiz/players/${myId}`), { name: newName });
+  setHud();
+  closeNameEdit();
+};
+document.getElementById('inp-edit-name').addEventListener('keydown', e => { if(e.key==='Enter') saveNameEdit(); });
 
+// ── Tabs ──────────────────────────────────────
 window.switchTab = id => {
   const ids = ['t-me','t-lb','t-ans'];
   document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('on', ids[i]===id));
@@ -701,7 +714,7 @@ window.switchTab = id => {
   document.getElementById(id).classList.add('on');
 };
 
-// JOIN
+// ── JOIN ──────────────────────────────────────
 window.handleJoin = async () => {
   const name = document.getElementById('inp-name').value.trim();
   const err  = document.getElementById('join-err');
@@ -715,12 +728,23 @@ window.handleJoin = async () => {
       err.textContent = 'Квіз уже йде! Зачекай наступного сеансу.';
       btn.disabled = false; btn.textContent = 'Приєднатись →'; return;
     }
+    // Assign sequential number
+    const playersSnap = await get(ref(db,'quiz/players'));
+    const playerNum = playersSnap.exists() ? Object.keys(playersSnap.val()).length + 1 : 1;
+
     const pr = push(ref(db,'quiz/players'));
-    myId = pr.key; myName = name;
-    await set(pr, { name, score:0, answers:{} });
+    myId = pr.key; myName = name; myNum = playerNum;
+    await set(pr, { name, score:0, answers:{}, stars:0, number:playerNum });
+
     sessionStorage.setItem('qid', myId);
     sessionStorage.setItem('qname', myName);
-    setHud(); show('waiting'); listen();
+    sessionStorage.setItem('qnum', playerNum);
+
+    // Show player badge
+    document.getElementById('player-id-badge').style.display = 'block';
+    document.getElementById('player-id-num').textContent = fmtNum(playerNum);
+
+    setHud(); pshow('waiting'); listen();
   } catch(e) {
     err.textContent = 'Помилка підключення. Перевір інтернет.';
     btn.disabled = false; btn.textContent = 'Приєднатись →';
@@ -728,45 +752,44 @@ window.handleJoin = async () => {
 };
 document.getElementById('inp-name').addEventListener('keydown', e => { if(e.key==='Enter') handleJoin(); });
 
-// LISTEN
+// ── LISTEN ────────────────────────────────────
 function listen() {
   onValue(ref(db,'quiz/players'), snap => {
-    const cnt = snap.exists() ? Object.keys(snap.val()).length : 0;
+    const players = snap.exists() ? snap.val() : {};
+    const cnt = Object.keys(players).length;
     document.getElementById('wait-cnt').textContent = cnt;
-    if (isAdmin) { document.getElementById('adm-pl').textContent = cnt; renderAdmLb(snap.val()||{}); }
+
+    if (isAdmin) {
+      document.getElementById('adm-pl').textContent = cnt;
+      renderAdminPlayers(players);
+      renderAdmLb(players);
+    }
   });
 
   onValue(ref(db,'quiz'), snap => {
     if (!snap.exists()) return;
     const s = snap.val(); qstate = s;
     if (s.timePerQuestion) TIME = s.timePerQuestion;
-    if (isAdmin) updAdm(s);
-    if (!myId && !isAdmin) return;
+    if (isAdmin) { updAdm(s); return; } // admin handled separately
+    if (!myId) return;
+
     switch(s.status) {
       case 'waiting':
-        lastRenderedQ = -1; show('waiting'); break;
+        lastRenderedQ = -1; pshow('waiting'); break;
       case 'active':
-        if (isAdmin) {
-          get(ref(db,'quiz/players')).then(snap => renderLb('lb-mid', { players: snap.val()||{} }));
-          show('leaderboard');
-        } else {
-          if (s.currentQuestion !== lastRenderedQ) { lastRenderedQ = s.currentQuestion; renderQ(s); }
-        }
+        if (s.currentQuestion !== lastRenderedQ) { lastRenderedQ = s.currentQuestion; renderQ(s); }
         break;
-      case 'review':
-        renderRv(s); break;
+      case 'review':      renderRv(s); break;
       case 'leaderboard':
-        get(ref(db,'quiz/players')).then(snap => renderLb('lb-mid', { players: snap.val()||{} }));
-        show('leaderboard'); break;
-      case 'finished':
-        renderFinished(s); break;
+        get(ref(db,'quiz/players')).then(sn => renderLb('lb-mid', { players: sn.val()||{} }));
+        pshow('leaderboard'); break;
+      case 'finished':    renderFinished(s); break;
     }
   });
 }
 
-// QUESTION
+// ── QUESTION (player) ─────────────────────────
 function renderQ(s) {
-  if (isAdmin) return;
   clearInterval(tmrIv); myAns = null;
   const qi = s.currentQuestion, q = Q[qi];
 
@@ -774,254 +797,347 @@ function renderQ(s) {
   document.getElementById('q-prog').style.width = `${(qi+1)/Q.length*100}%`;
   document.getElementById('q-txt').textContent  = q.text;
 
+  // Image
+  const img = document.getElementById('q-img');
+  img.src = q.img; img.alt = q.text;
+
   const grid = document.getElementById('q-grid');
   grid.innerHTML = '';
   q.a.forEach((ans, i) => {
     const b = document.createElement('button');
-    b.className = 'ans-btn';
-    b.setAttribute('data-c', i);
+    b.className = 'ans-btn'; b.setAttribute('data-c', i);
     b.innerHTML = `<div class="ans-letter">${L[i]}</div><div class="ans-text">${esc(ans)}</div>`;
     b.onclick = () => pick(i, q, qi);
     grid.appendChild(b);
   });
 
-  show('question');
-
-  const elapsed = Math.floor((Date.now() - (s.questionStartedAt || Date.now())) / 1000);
+  pshow('question');
+  const elapsed = Math.floor((Date.now() - (s.questionStartedAt||Date.now())) / 1000);
   let rem = Math.max(0, TIME - elapsed);
-  tick(rem);
+  tickPlayer(rem);
   tmrIv = setInterval(() => {
     rem--;
     if (rem < 0) { clearInterval(tmrIv); return; }
-    tick(rem);
-    if (rem === 0) {
-      clearInterval(tmrIv);
-      if (isAdmin) setTimeout(() => adminClose(), 600);
-    }
+    tickPlayer(rem);
+    if (rem === 0) clearInterval(tmrIv);
   }, 1000);
 }
 
-function tick(s) {
+function tickPlayer(s) {
   if (s < 0) s = 0;
-  const C = 138.2, r = s / TIME;
+  const C = 125.7, r = s / TIME;
   const fg = document.getElementById('t-fg');
   fg.style.strokeDashoffset = C * (1 - r);
-  fg.style.stroke = s <= 5 ? 'var(--ca)' : s <= 10 ? 'var(--cc)' : 'var(--ink)';
+  fg.style.stroke = s<=5 ? 'var(--ca)' : s<=10 ? 'var(--cc)' : 'var(--ink)';
   const tn = document.getElementById('t-num');
-  tn.textContent = s;
-  tn.style.color = s <= 5 ? 'var(--ca)' : 'var(--ink)';
+  tn.textContent = s; tn.style.color = s<=5 ? 'var(--ca)' : 'var(--ink)';
 }
 
 function pick(i, q, qi) {
   if (myAns !== null) return;
   myAns = i;
   document.querySelectorAll('.ans-btn').forEach(b => b.disabled = true);
-
-  const ok  = i === q.c;
-  const elapsed = (Date.now() - (qstate?.questionStartedAt || Date.now())) / 1000;
-  const ratio   = Math.max(0, Math.min(1, 1 - elapsed / TIME));
-  const pts = ok ? Math.max(100, Math.round(1000 * ratio)) : 0;
+  const ok = i === q.c;
+  const elapsed = (Date.now() - (qstate?.questionStartedAt||Date.now())) / 1000;
+  const ratio = Math.max(0, Math.min(1, 1 - elapsed/TIME));
+  const pts = ok ? Math.max(100, Math.round(1000*ratio)) : 0;
   myScore += pts;
+  if (ok) myStars++;
   myLog[`q${qi}`] = { answer:i, correct:ok, points:pts };
 
-  // Show correct/wrong visually
+  // Visual feedback
   document.querySelectorAll('.ans-btn').forEach((b, bi) => {
-    if (bi === q.c)  b.classList.add('correct');
-    else if (bi === i && !ok) b.classList.add('wrong');
+    if (bi===q.c) b.classList.add('correct');
+    else if (bi===i&&!ok) b.classList.add('wrong');
     else b.classList.add('dim');
   });
 
-  update(ref(db, `quiz/players/${myId}`), { score:myScore, [`answers/q${qi}`]: { answer:i, correct:ok, points:pts } });
+  update(ref(db,`quiz/players/${myId}`), {
+    score:myScore, stars:myStars,
+    [`answers/q${qi}`]: { answer:i, correct:ok, points:pts }
+  });
   setHud();
 }
 
-// REVIEW
+// ── REVIEW (player) ───────────────────────────
 function renderRv(s) {
   clearInterval(tmrIv);
-  const q   = Q[s.currentQuestion];
+  const q = Q[s.currentQuestion];
   const log = myLog[`q${s.currentQuestion}`] || { answer:null, correct:false, points:0 };
   if (!myLog[`q${s.currentQuestion}`]) myLog[`q${s.currentQuestion}`] = log;
-
-  const ok  = log.correct;
-  const ans = log.answer !== null;
+  const ok = log.correct, ans = log.answer !== null;
 
   const badge = document.getElementById('rv-badge');
-  badge.textContent = !ans ? '⏰ Час вийшов!' : ok ? '✓ Правильно!' : '✗ Неправильно!';
-  badge.className = `rv-badge ${!ans ? 'sk' : ok ? 'ok' : 'ng'}`;
-
-  document.getElementById('rv-title').textContent = !ans ? 'Часу не вистачило' : ok ? 'Чудово!' : 'Не вгадав';
+  badge.textContent = !ans?'⏰ Час вийшов!':ok?'✓ Правильно!':'✗ Неправильно!';
+  badge.className = `rv-badge ${!ans?'sk':ok?'ok':'ng'}`;
+  document.getElementById('rv-title').textContent = !ans?'Часу не вистачило':ok?'Чудово!':'Не вгадав';
   document.getElementById('rv-sub').textContent   = `Правильна відповідь: ${q.a[q.c]}`;
-
-  const pEl = document.getElementById('rv-pts');
-  pEl.textContent = ok ? `+${log.points}` : '+0';
-  pEl.style.color = ok ? 'var(--cd)' : 'rgba(255,255,255,.4)';
+  const pe = document.getElementById('rv-pts');
+  pe.textContent = ok ? `+${log.points}` : '+0';
+  pe.style.color = ok ? 'var(--cd)' : 'rgba(255,255,255,.35)';
   document.getElementById('rv-tot').textContent = myScore;
-
-  show('review');
+  pshow('review');
 }
 
-// LEADERBOARD
+// ── LEADERBOARD helper ────────────────────────
 function renderLb(listId, s) {
-  const sorted = Object.entries(s.players || {})
-    .map(([id,p]) => ({...p, id}))
-    .sort((a,b) => b.score - a.score)
-    .slice(0, 10);
-
+  const sorted = Object.entries(s.players||{})
+    .map(([id,p]) => ({...p,id}))
+    .sort((a,b) => b.score-a.score)
+    .slice(0,10);
   const el = document.getElementById(listId);
   el.innerHTML = '';
-  sorted.forEach((p, i) => {
+  sorted.forEach((p,i) => {
     const row = document.createElement('div');
-    row.className = `lb-row r${i+1}${p.id === myId ? ' me' : ''}`;
-    row.style.animationDelay = `${i * .06}s`;
+    row.className = `lb-row r${i+1}${p.id===myId?' me':''}`;
+    row.style.animationDelay = `${i*.06}s`;
     row.innerHTML = `
-      <div class="lb-rank">${M[i] || (i+1)}</div>
-      <div class="lb-name">${esc(p.name)}${p.id===myId?' <span style="color:var(--cb);font-size:.72rem">← ти</span>':''}</div>
-      <div class="lb-score">${p.score}</div>`;
+      <div class="lb-rank">${M[i]||(i+1)}</div>
+      <div class="lb-info">
+        <div class="lb-name">${esc(p.name)}${p.id===myId?' <span style="color:var(--cb);font-size:.68rem">← ти</span>':''}</div>
+        <div class="lb-num">${p.number?fmtNum(p.number):''}</div>
+      </div>
+      <div class="lb-right">
+        <div class="lb-score">${p.score}</div>
+        <div class="lb-stars">${'⭐'.repeat(Math.min(p.stars||0,8))||'—'}</div>
+      </div>`;
     el.appendChild(row);
   });
 }
 
-// FINISHED
+// ── FINISHED ──────────────────────────────────
 function renderFinished(s) {
   renderLb('lb-fin', s);
-
-  const ok = Object.values(myLog).filter(x => x.correct).length;
-  const ng = Object.values(myLog).filter(x => !x.correct && x.answer !== null).length;
-  const sk = Q.length - ok - ng;
-
+  const ok=Object.values(myLog).filter(x=>x.correct).length;
+  const ng=Object.values(myLog).filter(x=>!x.correct&&x.answer!==null).length;
+  const sk=Q.length-ok-ng;
   document.getElementById('fin-sc').textContent  = myScore;
-  document.getElementById('fin-max').textContent = Q.length * 1000;
+  document.getElementById('fin-max').textContent = Q.length*1000;
   document.getElementById('fin-ok').textContent  = ok;
   document.getElementById('fin-ng').textContent  = ng;
   document.getElementById('fin-sk').textContent  = sk;
 
   const list = document.getElementById('arv-list');
   list.innerHTML = '';
-  Q.forEach((q, i) => {
-    const log = myLog[`q${i}`] || { answer:null, correct:false };
-    const cls = log.answer === null ? 'sk' : log.correct ? 'ok' : 'ng';
-    const icon = log.answer === null ? '⏰' : log.correct ? '✓' : '✗';
+  Q.forEach((q,i) => {
+    const log = myLog[`q${i}`]||{answer:null,correct:false};
+    const cls = log.answer===null?'sk':log.correct?'ok':'ng';
+    const icon= log.answer===null?'⏰':log.correct?'✓':'✗';
     const item = document.createElement('div');
-    item.className = `arv-item ${cls}`;
-    const opts = q.a.map((ans, ai) => {
-      let c = '';
-      if (ai === q.c) c += ' is-correct';
-      if (ai === log.answer && !log.correct) c += ' is-mine-wrong';
-      const badge = ai === q.c ? '<span class="badge">✓</span>' :
-                    (ai === log.answer && !log.correct) ? '<span class="badge">← моя</span>' : '';
+    item.className=`arv-item ${cls}`;
+    const opts=q.a.map((ans,ai)=>{
+      let c='';
+      if(ai===q.c) c+=' is-correct';
+      if(ai===log.answer&&!log.correct) c+=' is-mine-wrong';
+      const badge=ai===q.c?'<span class="badge">✓</span>':(ai===log.answer&&!log.correct)?'<span class="badge">← моя</span>':'';
       return `<div class="arv-opt${c}">${esc(ans)}${badge}</div>`;
     }).join('');
-    item.innerHTML = `
-      <div class="arv-num">${icon} Питання ${i+1}</div>
-      <div class="arv-q">${esc(q.text)}</div>
-      <div class="arv-opts">${opts}</div>`;
+    item.innerHTML=`<div class="arv-num">${icon} Питання ${i+1}</div><div class="arv-q">${esc(q.text)}</div><div class="arv-opts">${opts}</div>`;
     list.appendChild(item);
   });
-
-  show('finished');
+  pshow('finished');
 }
 
-// ADMIN live lb
+// ════════════════════════════════
+// ADMIN functions
+// ════════════════════════════════
+window.changeTime = d => {
+  adminTime = Math.min(60, Math.max(5, adminTime+d));
+  document.getElementById('adm-time').textContent = adminTime;
+};
+
+function renderAdminPlayers(players) {
+  const grid = document.getElementById('adm-players-grid');
+  const lbl  = document.getElementById('adm-waiting-lbl');
+  const list = Object.values(players).sort((a,b)=>(a.number||0)-(b.number||0));
+  lbl.textContent = `${list.length} учасник${list.length===1?'':'ів'} в кімнаті`;
+  grid.innerHTML = '';
+  list.forEach(p => {
+    const chip = document.createElement('div');
+    chip.className = 'adm-player-chip';
+    chip.innerHTML = `<div class="adm-player-chip-num">${p.number?fmtNum(p.number):''}</div><div class="adm-player-chip-name">${esc(p.name)}</div>`;
+    grid.appendChild(chip);
+  });
+}
+
 function renderAdmLb(players) {
-  const s = Object.values(players).sort((a,b) => b.score-a.score).slice(0,5);
-  const el = document.getElementById('adm-lb');
+  const sorted = Object.values(players).sort((a,b)=>b.score-a.score).slice(0,20);
+  const el = document.getElementById('adm-lb-list');
   el.innerHTML = '';
-  s.forEach((p, i) => {
-    const r = document.createElement('div');
-    r.className = 'adm-lb-row';
-    r.innerHTML = `<div class="adm-lb-rank">${M[i]||(i+1)}</div>
-      <div class="adm-lb-name">${esc(p.name)}</div>
-      <div class="adm-lb-score">${p.score}</div>`;
-    el.appendChild(r);
+  sorted.forEach((p,i) => {
+    const row = document.createElement('div');
+    row.className = 'adm-lb-row';
+    row.innerHTML = `
+      <div class="adm-lb-rank">${M[i]||(i+1)}</div>
+      <div class="adm-lb-info">
+        <div class="adm-lb-name">${esc(p.name)}</div>
+        <div class="adm-lb-pid">${p.number?fmtNum(p.number):''}</div>
+      </div>
+      <div class="adm-lb-right">
+        <div class="adm-lb-score">${p.score}</div>
+        <div class="adm-lb-stars">${'⭐'.repeat(Math.min(p.stars||0,8))||'—'}</div>
+      </div>`;
+    el.appendChild(row);
   });
 
-  if (qstate?.status === 'active' || qstate?.status === 'review') {
-    const qi = qstate.currentQuestion, q = Q[qi];
-    const counts = [0,0,0,0]; let answered = 0;
-    Object.values(players).forEach(p => {
-      const a = p.answers?.[`q${qi}`];
-      if (a && typeof a === 'object' && a.answer !== null && a.answer !== undefined) {
-        counts[a.answer]++; answered++;
-      }
+  // Distribution
+  if (qstate?.status==='active'||qstate?.status==='review') {
+    const qi=qstate.currentQuestion, q=Q[qi];
+    const counts=[0,0,0,0]; let answered=0;
+    Object.values(players).forEach(p=>{
+      const a=p.answers?.[`q${qi}`];
+      if(a&&typeof a==='object'&&a.answer!=null){counts[a.answer]++;answered++;}
     });
-    const total = Object.keys(players).length;
-    const max   = Math.max(1, ...counts);
-    document.getElementById('adm-dist-wrap').style.display = 'block';
-    document.getElementById('adm-answered').textContent = answered;
-    document.getElementById('adm-total').textContent    = total;
-    const el2 = document.getElementById('adm-dist');
-    el2.innerHTML = '';
-    counts.forEach((cnt, i) => {
-      const pct = Math.round(cnt/max*100);
-      el2.innerHTML += `<div class="dist-row">
+    const total=Object.keys(players).length;
+    const max=Math.max(1,...counts);
+    document.getElementById('adm-dist-wrap').style.display='block';
+    document.getElementById('adm-answered').textContent=answered;
+    document.getElementById('adm-total').textContent=total;
+    const dist=document.getElementById('adm-dist');
+    dist.innerHTML='';
+    counts.forEach((cnt,i)=>{
+      const pct=Math.round(cnt/max*100);
+      dist.innerHTML+=`<div class="dist-row">
         <div class="dist-ltr">${L[i]}</div>
-        <div class="dist-bwrap"><div class="dist-bar${i===q.c?' ok':''}" style="width:${pct}%"></div></div>
+        <div class="dist-bar-track"><div class="dist-bar a${i}${i===q.c?' correct-bar':''}" style="width:${pct}%"></div></div>
         <div class="dist-cnt">${cnt}</div></div>`;
     });
   } else {
-    document.getElementById('adm-dist-wrap').style.display = 'none';
+    document.getElementById('adm-dist-wrap').style.display='none';
   }
+}
+
+// Admin timer
+let admTmrIv = null;
+function startAdmTimer(startedAt) {
+  clearInterval(admTmrIv);
+  const elapsed = Math.floor((Date.now()-startedAt)/1000);
+  let rem = Math.max(0, TIME-elapsed);
+  tickAdmin(rem);
+  admTmrIv = setInterval(()=>{
+    rem--;
+    if(rem<0){clearInterval(admTmrIv);return;}
+    tickAdmin(rem);
+    if(rem===0){clearInterval(admTmrIv); adminClose();}
+  }, 1000);
+}
+function tickAdmin(s){
+  if(s<0)s=0;
+  const C=182.2, r=s/TIME;
+  const fg=document.getElementById('adm-t-fg');
+  fg.style.strokeDashoffset=C*(1-r);
+  fg.style.stroke=s<=5?'var(--ca)':s<=10?'var(--cc)':'var(--ink)';
+  const tn=document.getElementById('adm-t-num');
+  tn.textContent=s; tn.style.color=s<=5?'var(--ca)':'var(--ink)';
 }
 
 function updAdm(s) {
-  const sm = {idle:'—',waiting:'Очікування',active:'Питання',review:'Огляд',leaderboard:'Рейтинг',finished:'Завершено'};
+  const sm={idle:'—',waiting:'Очікування',active:'Питання',review:'Огляд',leaderboard:'Рейтинг',finished:'Завершено'};
   document.getElementById('adm-st').textContent = sm[s.status]||s.status;
   document.getElementById('adm-qi').textContent =
-    ['active','review','leaderboard'].includes(s.status) ? `${(s.currentQuestion||0)+1}/${Q.length}` : '—';
+    ['active','review','leaderboard'].includes(s.status)?`${(s.currentQuestion||0)+1}/${Q.length}`:'—';
 
-  const vis = (id, show) => document.getElementById(id).style.display = show ? 'block' : 'none';
+  const vis=(id,show)=>document.getElementById(id).style.display=show?'':'none';
   vis('adm-start',   ['idle','waiting'].includes(s.status));
-  vis('adm-close',   s.status === 'active');
-  vis('adm-show-lb', s.status === 'review');
-  vis('adm-next-q',  s.status === 'leaderboard' || s.status === 'review');
+  vis('adm-close',   s.status==='active');
+  vis('adm-show-lb', s.status==='review');
+  vis('adm-next-q',  ['leaderboard','review'].includes(s.status));
+
+  const isActive = ['active','review'].includes(s.status);
+  document.getElementById('adm-time-ctrl').style.display = isActive?'none':'block';
+  document.getElementById('adm-timer-wrap').style.display = isActive?'block':'none';
+  document.getElementById('adm-img-wrap').style.display = isActive?'block':'none';
+  document.getElementById('adm-dist-wrap').style.display = isActive?'block':'none';
+
+  // Waiting vs active panels
+  document.getElementById('adm-waiting-players').style.display = s.status==='waiting'?'flex':'none';
+  document.getElementById('adm-waiting-players').style.flexDirection='column';
+  document.getElementById('adm-lb-wrap').style.display = isActive||s.status==='leaderboard'?'block':'none';
+
+  if (isActive) {
+    const qi = s.currentQuestion, q = Q[qi];
+    document.getElementById('adm-q-lbl').textContent = `Питання ${qi+1} / ${Q.length}`;
+    document.getElementById('adm-q-prog').style.width = `${(qi+1)/Q.length*100}%`;
+    document.getElementById('adm-q-txt').textContent = q.text;
+    document.getElementById('adm-q-txt').classList.remove('dimmed');
+    document.getElementById('adm-img').src = q.img;
+
+    if (s.status==='active') startAdmTimer(s.questionStartedAt||Date.now());
+    else clearInterval(admTmrIv);
+
+    // fetch live lb
+    get(ref(db,'quiz/players')).then(sn=>renderAdmLb(sn.val()||{}));
+  } else {
+    clearInterval(admTmrIv);
+    if (s.status==='waiting') {
+      document.getElementById('adm-q-txt').textContent='Натисни «Почати» коли учасники готові';
+      document.getElementById('adm-q-txt').classList.add('dimmed');
+      document.getElementById('adm-q-lbl').textContent='Очікування учасників';
+      document.getElementById('adm-q-prog').style.width='0%';
+    }
+    if (s.status==='leaderboard'||s.status==='finished') {
+      get(ref(db,'quiz/players')).then(sn=>renderAdmLb(sn.val()||{}));
+    }
+  }
 }
 
-window.adminStart = async () => {
-  await update(ref(db,'quiz'), { status:'active', currentQuestion:0, questionStartedAt:Date.now(), timePerQuestion:adminTime });
+// Admin actions
+window.adminStart = async()=>{
+  await update(ref(db,'quiz'),{status:'active',currentQuestion:0,questionStartedAt:Date.now(),timePerQuestion:adminTime});
 };
-window.adminClose = async () => {
-  if (qstate?.status !== 'active') return;
-  await update(ref(db,'quiz'), { status:'review' });
+window.adminClose = async()=>{
+  if(qstate?.status!=='active')return;
+  clearInterval(admTmrIv);
+  await update(ref(db,'quiz'),{status:'review'});
 };
-window.adminShowLb = async () => {
-  if (qstate?.status !== 'review') return;
-  const players = (await get(ref(db,'quiz/players'))).val() || {};
-  await update(ref(db,'quiz'), { status:'leaderboard', players });
+window.adminShowLb = async()=>{
+  if(qstate?.status!=='review')return;
+  const players=(await get(ref(db,'quiz/players'))).val()||{};
+  await update(ref(db,'quiz'),{status:'leaderboard',players});
 };
-window.adminNextQ = async () => {
-  const s = qstate; if (!s) return;
-  const qi = s.currentQuestion, isLast = qi+1 >= Q.length;
-  if (['review','leaderboard'].includes(s.status)) {
-    if (isLast) {
-      const players = (await get(ref(db,'quiz/players'))).val() || {};
-      await update(ref(db,'quiz'), { status:'finished', players });
+window.adminNextQ = async()=>{
+  const s=qstate; if(!s)return;
+  const qi=s.currentQuestion, isLast=qi+1>=Q.length;
+  if(['review','leaderboard'].includes(s.status)){
+    if(isLast){
+      const players=(await get(ref(db,'quiz/players'))).val()||{};
+      await update(ref(db,'quiz'),{status:'finished',players});
     } else {
-      await update(ref(db,'quiz'), { status:'active', currentQuestion:qi+1, questionStartedAt:Date.now(), timePerQuestion:adminTime });
+      await update(ref(db,'quiz'),{status:'active',currentQuestion:qi+1,questionStartedAt:Date.now(),timePerQuestion:adminTime});
     }
   }
 };
-window.adminReset = async () => {
-  if (!confirm('Скинути весь квіз та всіх гравців?')) return;
-  myLog = {}; myScore = 0; lastRenderedQ = -1;
-  document.getElementById('hud-bar').classList.remove('on');
-  await set(ref(db,'quiz'), { status:'waiting', currentQuestion:0 });
+window.adminReset = async()=>{
+  if(!confirm('Скинути весь квіз та всіх гравців?'))return;
+  clearInterval(admTmrIv);
+  myLog={}; myScore=0; myStars=0; lastRenderedQ=-1;
+  await set(ref(db,'quiz'),{status:'waiting',currentQuestion:0});
 };
 
-// INIT
-(async () => {
-  if (isAdmin) {
-    document.getElementById('adm').classList.add('on');
-    show('waiting');
-    if (!(await get(ref(db,'quiz/status'))).exists())
-      await set(ref(db,'quiz'), { status:'waiting', currentQuestion:0 });
+// ── INIT ──────────────────────────────────────
+(async()=>{
+  if(isAdmin){
+    document.getElementById('admin-view').classList.add('on');
+    document.getElementById('player-view').style.display='none';
+    if(!(await get(ref(db,'quiz/status'))).exists())
+      await set(ref(db,'quiz'),{status:'waiting',currentQuestion:0});
     listen(); return;
   }
-  const sid = sessionStorage.getItem('qid'), sn = sessionStorage.getItem('qname');
-  if (sid && sn) {
-    myId = sid; myName = sn;
-    const snap = await get(ref(db,`quiz/players/${myId}`));
-    if (snap.exists()) { myScore = snap.val().score||0; Object.assign(myLog, snap.val().answers||{}); }
-    setHud(); show('waiting'); listen();
+  // Restore session
+  const sid=sessionStorage.getItem('qid'), sn=sessionStorage.getItem('qname'), snum=sessionStorage.getItem('qnum');
+  if(sid&&sn){
+    myId=sid; myName=sn; myNum=snum?parseInt(snum):null;
+    const snap=await get(ref(db,`quiz/players/${myId}`));
+    if(snap.exists()){
+      myScore=snap.val().score||0;
+      myStars=snap.val().stars||0;
+      Object.assign(myLog,snap.val().answers||{});
+    }
+    if(myNum){
+      document.getElementById('player-id-badge').style.display='block';
+      document.getElementById('player-id-num').textContent=fmtNum(myNum);
+    }
+    setHud(); pshow('waiting'); listen();
   }
 })();
 </script>
