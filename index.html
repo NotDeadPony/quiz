@@ -1088,7 +1088,7 @@ function updProj(s){
         const elapsed=Math.floor((Date.now()-(s.questionStartedAt||Date.now()))/1000);
         let rem=Math.max(0,adminTime-elapsed);
         tickProj(rem,'answer');
-        projTmrIv=setInterval(()=>{ rem--; if(rem<=0){clearInterval(projTmrIv);return;} tickProj(rem,'answer'); },1000);
+        projTmrIv=setInterval(()=>{ rem--; if(rem<=0){clearInterval(projTmrIv); adminClose(); return;} tickProj(rem,'answer'); },1000);
       }
       if(isReview){
         renderProjAnswers(qi, true); // reveal correct
@@ -1097,7 +1097,7 @@ function updProj(s){
         const elapsed=Math.floor((Date.now()-(s.reviewStartedAt||Date.now()))/1000);
         let rem=Math.max(0,reviewTime-elapsed);
         tickProj(rem,'review');
-        projTmrIv=setInterval(()=>{ rem--; if(rem<=0){clearInterval(projTmrIv);return;} tickProj(rem,'review'); },1000);
+        projTmrIv=setInterval(()=>{ rem--; if(rem<=0){clearInterval(projTmrIv); adminNextQ(); return;} tickProj(rem,'review'); },1000);
         get(ref(db,'quiz/players')).then(sn=>{ if(sn.exists()){ renderProjDist(sn.val(),qi,q.c,true); renderProjLbSide(sn.val()); } });
       }
     }
@@ -1242,8 +1242,27 @@ window.adminStart=async()=>{
 };
 // Same action available from projector Start button
 window.projAdminStart = ()=>adminStart();
-window.adminClose=async()=>{ if(qstate?.status!=='active')return; clearInterval(projTmrIv); await update(ref(db,'quiz'),{status:'review',reviewStartedAt:Date.now(),reviewTime}); };
-async function adminNextQ(){ const s=qstate; if(!s)return; const qi=s.currentQuestion,isLast=qi+1>=Q.length; if(isLast){const players=(await get(ref(db,'quiz/players'))).val()||{};await update(ref(db,'quiz'),{status:'finished',players});}else{projLastSt=''; lastAdmSt='';await update(ref(db,'quiz'),{status:'active',currentQuestion:qi+1,questionStartedAt:Date.now(),timePerQuestion:adminTime,reviewTime});} }
+window.adminClose=async()=>{
+  // Allow call even if qstate is stale - check Firebase status directly
+  const currentStatus = qstate?.status;
+  if(currentStatus && currentStatus!=='active') return;
+  clearInterval(projTmrIv);
+  await update(ref(db,'quiz'),{status:'review',reviewStartedAt:Date.now(),reviewTime});
+};
+async function adminNextQ(){
+  const s=qstate; if(!s)return;
+  const qi=s.currentQuestion, isLast=qi+1>=Q.length;
+  // Reset flags so timers restart on next question
+  projLastSt=''; stLastSt='';
+  if(isLast){
+    const players=(await get(ref(db,'quiz/players'))).val()||{};
+    await update(ref(db,'quiz'),{status:'finished',players});
+  } else {
+    projLastQ=qi+1; // prevent re-render triggering flag reset
+    projLastSt=''; stLastSt='';
+    await update(ref(db,'quiz'),{status:'active',currentQuestion:qi+1,questionStartedAt:Date.now(),timePerQuestion:adminTime,reviewTime});
+  }
+}
 window.adminNextManual=()=>adminNextQ();
 window.adminReset=async()=>{ if(!confirm('Скинути весь квіз та всіх гравців?'))return; clearInterval(projTmrIv); projLastSt=''; projLastQ=-1; await set(ref(db,'quiz'),{status:'waiting',currentQuestion:0}); };
 
