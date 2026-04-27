@@ -919,7 +919,6 @@ function renderQ(s){
   document.getElementById('q-lbl').textContent=`Питання ${qi+1} / ${Q.length}`;
   document.getElementById('q-prog').style.width=`${(qi+1)/Q.length*100}%`;
   document.getElementById('q-txt').textContent=q.text;
-  // Reset waiting label
   const wl=document.getElementById('q-waiting-lbl');
   const sp=wl?.querySelector('span');
   if(wl){ wl.style.display='none'; if(sp) sp.textContent=''; }
@@ -928,13 +927,18 @@ function renderQ(s){
   q.a.forEach((ans,i)=>{ const b=document.createElement('button'); b.className='ans-btn'; b.setAttribute('data-c',i); b.innerHTML=`<div class="ans-letter">${L[i]}</div><div class="ans-text">${esc(ans)}</div>`; b.onclick=()=>pick(i,q,qi); grid.appendChild(b); });
   pshow('question');
 
-  // ── Timer: recalculate from server timestamp every tick ──
-  // This way there's no local drift — each tick reads the current server time
-  // and computes exact remaining seconds. Works correctly even after answer.
-  const startedAt = s.questionStartedAt;
-  const duration  = adminTime;
+  // ── Timer: read questionStartedAt from qstate EVERY TICK (not closure)
+  // qstate is updated by Firebase onValue, so when server confirms the timestamp
+  // (after serverTimestamp() resolves), the next tick automatically uses the real value.
+  // This keeps all devices in sync regardless of when they receive the Firebase update.
+  const duration = adminTime;
 
-  function calcRem(){ return Math.max(0, duration - Math.floor((serverNow() - (startedAt || serverNow())) / 1000)); }
+  function calcRem(){
+    const st = qstate?.questionStartedAt;
+    // Guard: if timestamp not yet resolved (null/object), return full duration
+    if(!st || typeof st !== 'number') return duration;
+    return Math.max(0, duration - Math.floor((serverNow() - st) / 1000));
+  }
 
   tickPlayer(calcRem());
   plyrTmrIv = setInterval(()=>{
@@ -942,27 +946,23 @@ function renderQ(s){
     tickPlayer(rem);
     if(rem <= 0){
       clearInterval(plyrTmrIv);
-      revealAnswerLocally(q);
+      // Show 0 on timer ring
+      tickPlayer(0);
+      // Highlight correct answer only if player didn't answer yet
+      if(myAns === null){
+        document.querySelectorAll('.ans-btn').forEach((b,bi)=>{
+          b.disabled=true;
+          if(bi===q.c) b.classList.add('correct');
+          else b.classList.add('dim');
+        });
+        const wl2=document.getElementById('q-waiting-lbl');
+        const sp2=wl2?.querySelector('span');
+        if(wl2){ wl2.style.display='flex'; if(sp2) sp2.textContent='Очікуємо результати...'; }
+      }
     }
-  }, 500); // 500ms for smoother display without heavy CPU cost
+  }, 500);
 }
 
-// Show correct answer when local timer hits 0 — NO local countdown, Firebase drives the next step
-function revealAnswerLocally(q){
-  // Disable buttons and highlight correct answer
-  document.querySelectorAll('.ans-btn').forEach((b,bi)=>{
-    b.disabled=true;
-    if(bi===q.c) b.classList.add('correct');
-    else if(bi===myAns && myAns!==q.c) b.classList.add('wrong');
-    else b.classList.add('dim');
-  });
-  // Show simple waiting indicator (no countdown)
-  const wl=document.getElementById('q-waiting-lbl');
-  const sp=wl?.querySelector('span');
-  if(wl){ wl.style.display='flex'; if(sp) sp.textContent='Очікуємо результати...'; }
-  // Timer ring shows 0
-  tickPlayer(0);
-}
 function tickPlayer(s){
   if(s<0)s=0;
   const C=125.7,r=s/adminTime;
