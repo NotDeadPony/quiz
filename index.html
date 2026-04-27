@@ -154,30 +154,72 @@
 
     .proj-nav {
       display:flex; align-items:center; justify-content:space-between;
-      padding:14px 28px; background:var(--white); border-bottom:1px solid var(--brd);
-      flex-shrink:0;
+      padding:12px 28px; background:var(--white); border-bottom:1px solid var(--brd);
+      flex-shrink:0; gap:16px;
     }
     .proj-brand { font-family:var(--serif); font-size:1.3rem; font-weight:700; }
     .proj-brand em { font-style:italic; color:var(--ca); }
-    .proj-meta { display:flex; align-items:center; gap:16px; }
+    .proj-meta { display:flex; align-items:center; gap:12px; }
     .proj-tag { font-size:.75rem; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink3); }
     .proj-qnum { font-size:.8rem; font-weight:700; color:var(--ink2); }
     .proj-players { font-size:.8rem; color:var(--ink3); }
+    /* Teacher controls in nav (only visible during waiting) */
+    .proj-teacher-ctrl { display:flex; align-items:center; gap:6px; }
+    .proj-teacher-ctrl.hidden { display:none; }
+    .proj-ctrl-btn {
+      padding:7px 14px; border-radius:50px; border:none;
+      font-family:var(--sans); font-size:.76rem; font-weight:700;
+      cursor:pointer; transition:transform .15s; white-space:nowrap;
+    }
+    .proj-ctrl-btn:hover { transform:translateY(-1px); }
+    .proj-ctrl-start  { background:var(--ink); color:#fff; }
+    .proj-ctrl-link   { background:transparent; border:1.5px solid var(--brd2); color:var(--ink2); }
 
     /* Projector sections */
     .proj-section { display:none; flex:1; flex-direction:column; }
     .proj-section.active { display:flex; }
 
-    /* Waiting */
+    /* Waiting — 2-column layout */
     .proj-wait {
-      flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
+      flex:1; display:grid; grid-template-columns:1fr 380px;
+      gap:0; overflow:hidden;
     }
-    .proj-wait-logo { font-family:var(--serif); font-size:clamp(3rem,8vw,6rem); font-weight:900; line-height:1; }
+    .proj-wait-left {
+      padding:40px 40px 40px 56px; display:flex; flex-direction:column;
+      justify-content:center; gap:24px; border-right:1px solid var(--brd);
+    }
+    .proj-wait-logo { font-family:var(--serif); font-size:clamp(2.4rem,6vw,4.5rem); font-weight:900; line-height:1; }
     .proj-wait-logo em { font-style:italic; color:var(--ca); }
-    .proj-wait-sub { font-size:clamp(.9rem,2vw,1.2rem); color:var(--ink3); text-align:center; }
-    .proj-wait-count-wrap { background:var(--white); border:1px solid var(--brd); border-radius:var(--r); padding:20px 40px; text-align:center; }
-    .proj-wait-count { font-family:var(--serif); font-size:clamp(3rem,8vw,5rem); font-weight:900; line-height:1; }
-    .proj-wait-count-lbl { font-size:.8rem; color:var(--ink3); margin-top:4px; letter-spacing:1px; text-transform:uppercase; }
+    .proj-wait-tagline { font-size:clamp(.9rem,1.8vw,1.15rem); color:var(--ink2); line-height:1.5; }
+    .proj-wait-rules { display:flex; flex-direction:column; gap:8px; }
+    .proj-wait-rule { display:flex; align-items:center; gap:10px; font-size:clamp(.8rem,1.6vw,1rem); color:var(--ink2); }
+    .proj-wait-rule-icon { font-size:clamp(1rem,2vw,1.3rem); flex-shrink:0; }
+    .proj-wait-count-wrap {
+      display:flex; align-items:center; gap:12px;
+      background:var(--white); border:1px solid var(--brd); border-radius:var(--r);
+      padding:14px 20px; align-self:flex-start;
+    }
+    .proj-wait-count { font-family:var(--serif); font-size:clamp(2rem,5vw,3.5rem); font-weight:900; line-height:1; }
+    .proj-wait-count-lbl { font-size:clamp(.7rem,1.2vw,.85rem); color:var(--ink3); letter-spacing:1px; text-transform:uppercase; }
+
+    .proj-wait-right {
+      padding:32px 36px; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:20px; background:var(--bg);
+    }
+    .proj-qr-box {
+      background:var(--white); border:1px solid var(--brd); border-radius:16px;
+      padding:18px; display:flex; flex-direction:column; align-items:center; gap:10px;
+    }
+    #proj-qr-canvas { display:block; }
+    .proj-qr-label { font-size:clamp(.7rem,1.2vw,.85rem); color:var(--ink3); letter-spacing:1px; text-transform:uppercase; text-align:center; }
+    .proj-qr-url { font-size:clamp(.7rem,1.2vw,.82rem); color:var(--ink2); font-weight:600; text-align:center; word-break:break-all; }
+    .proj-wait-pulse { font-size:clamp(.75rem,1.4vw,.9rem); color:var(--ink3); }
+
+    @media(max-width:900px){
+      .proj-wait { grid-template-columns:1fr; }
+      .proj-wait-left { padding:28px 24px; border-right:none; border-bottom:1px solid var(--brd); }
+      .proj-wait-right { padding:20px 24px; }
+    }
 
     /* Active / Review */
     .proj-q-body {
@@ -369,6 +411,12 @@
     .ed-actions { display:flex; gap:8px; margin-top:4px; }
     .ed-actions .btn { margin-top:0; }
 
+    .proj-analysis-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+    .proj-analysis-label { font-size:clamp(.65rem,1.2vw,.82rem); font-weight:700; color:var(--ink3); width:28px; flex-shrink:0; }
+    .proj-analysis-track { flex:1; height:clamp(12px,2vh,20px); background:var(--brd); border-radius:6px; overflow:hidden; }
+    .proj-analysis-fill { height:100%; border-radius:6px; transition:width .8s cubic-bezier(.4,0,.2,1); }
+    .proj-analysis-pct { font-family:var(--serif); font-size:clamp(.7rem,1.3vw,.9rem); font-weight:700; width:38px; text-align:right; flex-shrink:0; }
+
     @media(max-width:500px) {
       .ans-grid,.proj-ans-grid { grid-template-columns:1fr; }
       .ans-btn { min-height:62px; }
@@ -440,6 +488,10 @@
     <div class="q-img-wrap"><img id="q-img" src="" alt="" loading="lazy"></div>
     <div class="q-text" id="q-txt"></div>
     <div class="ans-grid" id="q-grid"></div>
+    <!-- shown when local timer ends, waiting for next question -->
+    <div id="q-waiting-lbl" style="display:none;margin-top:14px;padding:10px 18px;background:var(--cb-lt);color:var(--cb);border-radius:50px;font-size:.82rem;font-weight:700;align-items:center;gap:8px">
+      <div class="dot" style="background:var(--cb)"></div><span></span>
+    </div>
   </div>
 
   <div class="screen" id="screen-review">
@@ -465,6 +517,14 @@
       <button class="tab-btn"   onclick="switchTab('t-ans')">Відповіді</button>
     </div>
     <div class="tab-pane on" id="t-me">
+      <!-- Rank banner -->
+      <div style="background:linear-gradient(135deg,var(--cb),var(--cb-lt));border:1px solid var(--brd);border-radius:var(--r);padding:18px;text-align:center;margin-bottom:10px;width:100%">
+        <div style="font-size:.72rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--cb);margin-bottom:4px">МОЄ МІСЦЕ</div>
+        <div style="display:flex;align-items:baseline;justify-content:center;gap:6px">
+          <span id="fin-rank" style="font-family:var(--serif);font-size:3.6rem;font-weight:900;line-height:1;color:var(--ink)">—</span>
+          <span id="fin-rank-of" style="font-size:.82rem;color:var(--ink3)">з 0</span>
+        </div>
+      </div>
       <div class="fin-hero">
         <div class="fin-score" id="fin-sc">0</div>
         <div class="fin-score-sub">балів із <span id="fin-max">0</span></div>
@@ -491,18 +551,49 @@
       <span class="proj-players">👥 <strong id="proj-players">0</strong></span>
       <span class="proj-tag">ФКІСІТ КНЕУ</span>
     </div>
+    <!-- Teacher controls — visible only during waiting -->
+    <div class="proj-teacher-ctrl" id="proj-teacher-ctrl">
+      <button class="proj-ctrl-btn proj-ctrl-link" onclick="window.open('?settings','_blank')">⚙️ Налаштування</button>
+      <button class="proj-ctrl-btn proj-ctrl-link" onclick="window.open('?editor','_blank')">✏️ Питання</button>
+      <button class="proj-ctrl-btn proj-ctrl-start" onclick="projAdminStart()">▶ Почати квіз</button>
+    </div>
   </div>
 
   <!-- WAITING -->
-  <div class="proj-section" id="proj-sec-waiting">
+  <div class="proj-section active" id="proj-sec-waiting">
     <div class="proj-wait">
-      <div class="proj-wait-logo">IT <em>Квіз</em></div>
-      <div class="proj-wait-sub">Скануй QR-код та вводь ім'я щоб приєднатись</div>
-      <div class="proj-wait-count-wrap">
-        <div class="proj-wait-count" id="proj-wait-cnt">0</div>
-        <div class="proj-wait-count-lbl">учасників у грі</div>
+      <!-- LEFT: info + rules -->
+      <div class="proj-wait-left">
+        <div>
+          <div class="proj-wait-logo">IT <em>Квіз</em></div>
+          <div class="proj-wait-tagline" style="margin-top:8px">Перевір знання про IT-професії<br>та змагайся за перше місце!</div>
+        </div>
+
+        <div class="proj-wait-rules">
+          <div class="proj-wait-rule"><div class="proj-wait-rule-icon">📱</div><span>Скануй QR-код праворуч або введи адресу сайту</span></div>
+          <div class="proj-wait-rule"><div class="proj-wait-rule-icon">✏️</div><span>Введи своє ім'я щоб приєднатись до гри</span></div>
+          <div class="proj-wait-rule"><div class="proj-wait-rule-icon">❓</div><span>Читай питання та вибирай правильну відповідь</span></div>
+          <div class="proj-wait-rule"><div class="proj-wait-rule-icon">⚡</div><span>Відповідай швидше — отримуй більше балів!</span></div>
+          <div class="proj-wait-rule"><div class="proj-wait-rule-icon">🏆</div><span>Правильна відповідь — максимум 1000 балів</span></div>
+        </div>
+
+        <div class="proj-wait-count-wrap">
+          <div>
+            <div class="proj-wait-count" id="proj-wait-cnt">0</div>
+          </div>
+          <div class="proj-wait-count-lbl">учасників<br>у грі</div>
+        </div>
       </div>
-      <div class="pulse-row" style="font-size:.9rem"><div class="dot"></div><span>Очікування початку...</span></div>
+
+      <!-- RIGHT: QR code -->
+      <div class="proj-wait-right">
+        <div class="proj-qr-box">
+          <div class="proj-qr-label">Сканuj QR-код для участі</div>
+          <div id="proj-qr-canvas"></div>
+          <div class="proj-qr-url" id="proj-qr-url">завантаження...</div>
+        </div>
+        <div class="proj-wait-pulse pulse-row"><div class="dot"></div><span>Очікування початку...</span></div>
+      </div>
     </div>
   </div>
 
@@ -548,9 +639,22 @@
 
   <!-- LEADERBOARD / FINISHED -->
   <div class="proj-section" id="proj-sec-lb">
-    <div class="proj-lb">
-      <div class="proj-lb-title" id="proj-lb-title">🏆 Рейтинг</div>
-      <div class="proj-lb-list" id="proj-lb-list"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;flex:1;overflow:hidden">
+      <!-- Leaderboard -->
+      <div class="proj-lb" style="border-right:1px solid var(--brd)">
+        <div class="proj-lb-title" id="proj-lb-title">🏆 Рейтинг</div>
+        <div class="proj-lb-list" id="proj-lb-list"></div>
+      </div>
+      <!-- Question analysis (only on finished) -->
+      <div id="proj-analysis-wrap" style="display:none;padding:20px 28px;display:flex;flex-direction:column;gap:12px;overflow-y:auto">
+        <div class="proj-lb-title" style="font-size:clamp(1.1rem,2vw,1.6rem)">📊 Аналіз питань</div>
+        <div style="display:flex;gap:16px;font-size:clamp(.62rem,1vw,.75rem);margin-bottom:4px">
+          <span style="color:var(--cd)">■ Легко (≥75%)</span>
+          <span style="color:var(--cb)">■ Середньо</span>
+          <span style="color:var(--ca)">■ Складно (&lt;40%)</span>
+        </div>
+        <div id="proj-analysis"></div>
+      </div>
     </div>
   </div>
 </div><!-- /proj-view -->
@@ -800,6 +904,8 @@ function renderQ(s){
   document.getElementById('q-lbl').textContent=`Питання ${qi+1} / ${Q.length}`;
   document.getElementById('q-prog').style.width=`${(qi+1)/Q.length*100}%`;
   document.getElementById('q-txt').textContent=q.text;
+  // Hide waiting label
+  const wl=document.getElementById('q-waiting-lbl'); if(wl)wl.style.display='none';
   const img=document.getElementById('q-img'); img.src=q.img||''; img.alt=q.text;
   const grid=document.getElementById('q-grid'); grid.innerHTML='';
   q.a.forEach((ans,i)=>{ const b=document.createElement('button'); b.className='ans-btn'; b.setAttribute('data-c',i); b.innerHTML=`<div class="ans-letter">${L[i]}</div><div class="ans-text">${esc(ans)}</div>`; b.onclick=()=>pick(i,q,qi); grid.appendChild(b); });
@@ -807,7 +913,41 @@ function renderQ(s){
   const elapsed=Math.floor((Date.now()-(s.questionStartedAt||Date.now()))/1000);
   let rem=Math.max(0,adminTime-elapsed);
   tickPlayer(rem);
-  plyrTmrIv=setInterval(()=>{ rem--; if(rem<0){clearInterval(plyrTmrIv);return;} tickPlayer(rem); },1000);
+  plyrTmrIv=setInterval(()=>{
+    rem--;
+    if(rem<=0){
+      clearInterval(plyrTmrIv);
+      // ── Locally reveal correct answer immediately ──
+      localRevealCorrect(q, qi);
+      return;
+    }
+    tickPlayer(rem);
+  },1000);
+}
+
+// Show correct answer on player screen without waiting for Firebase
+function localRevealCorrect(q, qi){
+  // Disable all buttons and highlight correct
+  document.querySelectorAll('.ans-btn').forEach((b,bi)=>{
+    b.disabled=true;
+    if(bi===q.c) b.classList.add('correct');
+    else if(bi===myAns&&bi!==q.c) b.classList.add('wrong');
+    else b.classList.add('dim');
+  });
+  // Change timer to review countdown
+  let rev=reviewTime;
+  tickPlayer(rev);
+  document.getElementById('pt-fg').style.stroke='var(--cb)';
+  const wl=document.getElementById('q-waiting-lbl');
+  if(wl){ wl.style.display='flex'; wl.textContent=`Наступне питання через ${rev}с`; }
+  plyrTmrIv=setInterval(()=>{
+    rev--;
+    if(rev<0){clearInterval(plyrTmrIv);return;}
+    tickPlayer(rev);
+    if(wl) wl.textContent=rev>0?`Наступне питання через ${rev}с`:'Завантаження...';
+    if(rev===0){clearInterval(plyrTmrIv);}
+  },1000);
+  // Firebase will update state — renderRv/renderQ handle the actual transition
 }
 function tickPlayer(s){
   if(s<0)s=0;
@@ -851,6 +991,14 @@ function renderLb(listId,s){
   sorted.forEach((p,i)=>{ const row=document.createElement('div'); row.className=`lb-row r${i+1}${p.id===myId?' me':''}`; row.style.animationDelay=`${i*.06}s`; row.innerHTML=`<div class="lb-rank">${M[i]||(i+1)}</div><div class="lb-info"><div class="lb-name">${esc(p.name)}${p.id===myId?' <span style="color:var(--cb);font-size:.65rem">← ти</span>':''}</div><div class="lb-num">${p.number?fmtNum(p.number):''}</div></div><div class="lb-right"><div class="lb-score">${p.score}</div><div class="lb-stars">${'⭐'.repeat(Math.min(p.stars||0,10))||'—'}</div></div>`; el.appendChild(row); });
 }
 function renderFinished(s){
+  // compute rank
+  const allPlayers=Object.entries(s.players||{}).sort(([,a],[,b])=>b.score-a.score);
+  const myRankIdx=allPlayers.findIndex(([id])=>id===myId);
+  const myRank=myRankIdx>=0?myRankIdx+1:allPlayers.length+1;
+  const total=allPlayers.length;
+  document.getElementById('fin-rank').textContent=`#${myRank}`;
+  document.getElementById('fin-rank-of').textContent=`з ${total}`;
+
   renderLb('lb-fin',s);
   const ok=Object.values(myLog).filter(x=>x.correct).length;
   const ng=Object.values(myLog).filter(x=>!x.correct&&x.answer!==null).length;
@@ -895,15 +1043,23 @@ function updProj(s){
   const isActive=s.status==='active', isReview=s.status==='review';
   const isLive=isActive||isReview;
 
-  if(s.status==='waiting'){ clearInterval(projTmrIv); projLastSt=''; projLastQ=-1; projShow('proj-sec-waiting'); return; }
+  if(s.status==='waiting'){ clearInterval(projTmrIv); projLastSt=''; projLastQ=-1;
+    document.getElementById('proj-teacher-ctrl').classList.remove('hidden');
+    projShow('proj-sec-waiting'); return; }
   if(s.status==='leaderboard'||s.status==='finished'){
     clearInterval(projTmrIv); projLastSt=s.status;
     document.getElementById('proj-lb-title').textContent=s.status==='finished'?'🎉 Фінальний рейтинг':'🏆 Рейтинг';
-    get(ref(db,'quiz/players')).then(sn=>renderProjLb(sn.val()||{}));
+    get(ref(db,'quiz/players')).then(sn=>{
+      const pl=sn.val()||{};
+      renderProjLb(pl);
+      if(s.status==='finished') renderProjAnalysis(pl);
+      document.getElementById('proj-analysis-wrap').style.display=s.status==='finished'?'block':'none';
+    });
     projShow('proj-sec-lb'); return;
   }
 
   if(isLive){
+    document.getElementById('proj-teacher-ctrl').classList.add('hidden');
     const qi=s.currentQuestion, q=Q[qi]; if(!q)return;
     document.getElementById('proj-qnum').textContent=`Питання ${qi+1} / ${Q.length}`;
     document.getElementById('proj-q-lbl').textContent=`Питання ${qi+1} / ${Q.length}`;
@@ -986,7 +1142,26 @@ function renderProjLb(players){
   const el=document.getElementById('proj-lb-list'); el.innerHTML='';
   sorted.forEach((p,i)=>{ const row=document.createElement('div'); row.className=`proj-lb-row pr${i+1}`; row.style.animationDelay=`${i*.07}s`; row.innerHTML=`<div class="proj-lb-rank">${M[i]||(i+1)}</div><div class="proj-lb-info"><div class="proj-lb-name">${esc(p.name)}</div><div class="proj-lb-pid">${p.number?fmtNum(p.number):''}</div></div><div class="proj-lb-right"><div class="proj-lb-stars">${'⭐'.repeat(Math.min(p.stars||0,12))||'—'}</div><div class="proj-lb-score">${p.score}</div></div>`; el.appendChild(row); });
 }
-function renderProjLbSide(players){ renderProjLb(players); }  // same for now
+
+function renderProjAnalysis(players){
+  const el=document.getElementById('proj-analysis'); if(!el)return;
+  const total=Object.keys(players).length||1;
+  el.innerHTML='';
+  Q.forEach((q,i)=>{
+    let correct=0;
+    Object.values(players).forEach(p=>{ if(p.answers?.[`q${i}`]?.correct)correct++; });
+    const pct=Math.round(correct/total*100);
+    const isHard=pct<40, isEasy=pct>=75;
+    const color=isHard?'var(--ca)':isEasy?'var(--cd)':'var(--cb)';
+    el.innerHTML+=`<div class="proj-analysis-row">
+      <div class="proj-analysis-label">Q${i+1}</div>
+      <div class="proj-analysis-track">
+        <div class="proj-analysis-fill" style="width:${pct}%;background:${color}"></div>
+      </div>
+      <div class="proj-analysis-pct" style="color:${color}">${pct}%</div>
+    </div>`;
+  });
+}
 
 // ════════════════════════════════
 // SETTINGS (?settings)
@@ -995,6 +1170,8 @@ window.changeTime=(d,which)=>{
   if(which==='answer'){ adminTime=Math.min(120,Math.max(5,adminTime+d)); document.getElementById('st-atime').textContent=adminTime; }
   else { reviewTime=Math.min(30,Math.max(2,reviewTime+d)); document.getElementById('st-rtime').textContent=reviewTime; }
 };
+
+let stTmrIv=null, stLastSt='', stLastQ=-1;
 
 function listenSettings(){
   onValue(ref(db,'quiz/players'),snap=>{
@@ -1010,7 +1187,26 @@ function listenSettings(){
     if(s.timePerQuestion){ adminTime=s.timePerQuestion; document.getElementById('st-atime').textContent=adminTime; }
     if(s.reviewTime){ reviewTime=s.reviewTime; document.getElementById('st-rtime').textContent=reviewTime; }
     updSettings(s);
+    // Settings also runs auto-advance as backup
+    runSettingsTimer(s);
   });
+}
+
+function runSettingsTimer(s){
+  if(s.status==='active' && (s.currentQuestion!==stLastQ || stLastSt!=='active')){
+    stLastQ=s.currentQuestion; stLastSt='active';
+    clearInterval(stTmrIv);
+    const elapsed=Math.floor((Date.now()-(s.questionStartedAt||Date.now()))/1000);
+    let rem=Math.max(0,adminTime-elapsed);
+    stTmrIv=setInterval(()=>{ rem--; if(rem<=0){clearInterval(stTmrIv);adminClose();} },1000);
+  } else if(s.status==='review' && stLastSt!=='review'){
+    stLastSt='review'; clearInterval(stTmrIv);
+    const elapsed=Math.floor((Date.now()-(s.reviewStartedAt||Date.now()))/1000);
+    let rem=Math.max(0,reviewTime-elapsed);
+    stTmrIv=setInterval(()=>{ rem--; if(rem<=0){clearInterval(stTmrIv);adminNextQ();} },1000);
+  } else if(!['active','review'].includes(s.status)){
+    clearInterval(stTmrIv); stLastSt=s.status;
+  }
 }
 
 function updSettings(s){
@@ -1044,6 +1240,8 @@ window.adminStart=async()=>{
   lastAdmSt=''; lastAdmQ=-1; projLastSt=''; projLastQ=-1;
   await update(ref(db,'quiz'),{status:'active',currentQuestion:0,questionStartedAt:Date.now(),timePerQuestion:adminTime,reviewTime});
 };
+// Same action available from projector Start button
+window.projAdminStart = ()=>adminStart();
 window.adminClose=async()=>{ if(qstate?.status!=='active')return; clearInterval(projTmrIv); await update(ref(db,'quiz'),{status:'review',reviewStartedAt:Date.now(),reviewTime}); };
 async function adminNextQ(){ const s=qstate; if(!s)return; const qi=s.currentQuestion,isLast=qi+1>=Q.length; if(isLast){const players=(await get(ref(db,'quiz/players'))).val()||{};await update(ref(db,'quiz'),{status:'finished',players});}else{projLastSt=''; lastAdmSt='';await update(ref(db,'quiz'),{status:'active',currentQuestion:qi+1,questionStartedAt:Date.now(),timePerQuestion:adminTime,reviewTime});} }
 window.adminNextManual=()=>adminNextQ();
@@ -1103,6 +1301,18 @@ window.edDelete=async i=>{ if(!confirm(`Видалити питання ${i+1}?`
     document.getElementById('proj-view').classList.add('on');
     document.getElementById('player-view').style.display='none';
     if(!(await get(ref(db,'quiz/status'))).exists()) await set(ref(db,'quiz'),{status:'waiting',currentQuestion:0});
+
+    // Generate QR code pointing to player URL
+    const playerUrl = location.origin + location.pathname;
+    document.getElementById('proj-qr-url').textContent = playerUrl;
+    if(typeof QRCode !== 'undefined'){
+      new QRCode(document.getElementById('proj-qr-canvas'),{
+        text: playerUrl, width:180, height:180,
+        colorDark:'#1A1A1A', colorLight:'#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }
+
     listenProj(); return;
   }
 
@@ -1124,5 +1334,6 @@ window.edDelete=async i=>{ if(!confirm(`Видалити питання ${i+1}?`
   }
 })();
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </body>
 </html>
