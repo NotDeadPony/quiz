@@ -927,19 +927,24 @@ function renderQ(s){
   const grid=document.getElementById('q-grid'); grid.innerHTML='';
   q.a.forEach((ans,i)=>{ const b=document.createElement('button'); b.className='ans-btn'; b.setAttribute('data-c',i); b.innerHTML=`<div class="ans-letter">${L[i]}</div><div class="ans-text">${esc(ans)}</div>`; b.onclick=()=>pick(i,q,qi); grid.appendChild(b); });
   pshow('question');
-  const elapsed=Math.floor((serverNow()-(s.questionStartedAt||serverNow()))/1000);
-  let rem=Math.max(0,adminTime-elapsed);
-  tickPlayer(rem);
-  plyrTmrIv=setInterval(()=>{
-    rem--;
-    if(rem<=0){
-      clearInterval(plyrTmrIv);
-      // Timer expired: reveal correct answer locally, then wait for Firebase status=review
-      revealAnswerLocally(q);
-      return;
-    }
+
+  // ── Timer: recalculate from server timestamp every tick ──
+  // This way there's no local drift — each tick reads the current server time
+  // and computes exact remaining seconds. Works correctly even after answer.
+  const startedAt = s.questionStartedAt;
+  const duration  = adminTime;
+
+  function calcRem(){ return Math.max(0, duration - Math.floor((serverNow() - (startedAt || serverNow())) / 1000)); }
+
+  tickPlayer(calcRem());
+  plyrTmrIv = setInterval(()=>{
+    const rem = calcRem();
     tickPlayer(rem);
-  },1000);
+    if(rem <= 0){
+      clearInterval(plyrTmrIv);
+      revealAnswerLocally(q);
+    }
+  }, 500); // 500ms for smoother display without heavy CPU cost
 }
 
 // Show correct answer when local timer hits 0 — NO local countdown, Firebase drives the next step
@@ -1111,37 +1116,35 @@ function updProj(s){
 
       if(isActive){
         document.getElementById('proj-t-lbl').textContent='відповідь';
-        const elapsed=Math.floor((serverNow()-(s.questionStartedAt||serverNow()))/1000);
-        let rem=Math.max(0,adminTime-elapsed);
-        tickProj(rem,'answer');
+        const startedAt=s.questionStartedAt, dur=adminTime;
+        const calcRem=()=>Math.max(0,dur-Math.floor((serverNow()-(startedAt||serverNow()))/1000));
+        tickProj(calcRem(),'answer');
         projTmrIv=setInterval(async ()=>{
-          rem--;
+          const rem=calcRem();
+          tickProj(rem,'answer');
+          if(rem%2===0) get(ref(db,'quiz/players')).then(sn=>{ if(sn.exists()) renderProjDist(sn.val(),qi,q.c,false); });
           if(rem<=0){
             clearInterval(projTmrIv);
             const cur=(await get(ref(db,'quiz/status'))).val();
             if(cur==='active') adminClose();
-            return;
           }
-          tickProj(rem,'answer');
-          if(rem%2===0) get(ref(db,'quiz/players')).then(sn=>{ if(sn.exists()) renderProjDist(sn.val(),qi,q.c,false); });
-        },1000);
+        },500);
       }
       if(isReview){
         document.getElementById('proj-t-lbl').textContent='до наступного';
-        const elapsed=Math.floor((serverNow()-(s.reviewStartedAt||serverNow()))/1000);
-        let rem=Math.max(0,reviewTime-elapsed);
-        tickProj(rem,'review');
+        const startedAt=s.reviewStartedAt, dur=reviewTime;
+        const calcRem=()=>Math.max(0,dur-Math.floor((serverNow()-(startedAt||serverNow()))/1000));
+        tickProj(calcRem(),'review');
         get(ref(db,'quiz/players')).then(sn=>{ if(sn.exists()) renderProjDist(sn.val(),qi,q.c,true); });
         projTmrIv=setInterval(async ()=>{
-          rem--;
+          const rem=calcRem();
+          tickProj(rem,'review');
           if(rem<=0){
             clearInterval(projTmrIv);
             const cur=(await get(ref(db,'quiz/status'))).val();
             if(cur==='review') adminNextQ();
-            return;
           }
-          tickProj(rem,'review');
-        },1000);
+        },500);
       }
     }
   }
@@ -1241,28 +1244,26 @@ function runSettingsTimer(s){
   const stateKey = s.status + '_' + (s.currentQuestion||0);
   if(s.status==='active' && stateKey !== stLastSt){
     stLastSt=stateKey; clearInterval(stTmrIv);
-    const elapsed=Math.floor((serverNow()-(s.questionStartedAt||serverNow()))/1000);
-    let rem=Math.max(0,adminTime-elapsed);
+    const startedAt=s.questionStartedAt, dur=adminTime;
+    const calcRem=()=>Math.max(0,dur-Math.floor((serverNow()-(startedAt||serverNow()))/1000));
     stTmrIv=setInterval(async ()=>{
-      rem--;
-      if(rem<=0){
+      if(calcRem()<=0){
         clearInterval(stTmrIv);
         const cur=(await get(ref(db,'quiz/status'))).val();
         if(cur==='active') adminClose();
       }
-    },1000);
+    },500);
   } else if(s.status==='review' && stateKey !== stLastSt){
     stLastSt=stateKey; clearInterval(stTmrIv);
-    const elapsed=Math.floor((serverNow()-(s.reviewStartedAt||serverNow()))/1000);
-    let rem=Math.max(0,reviewTime-elapsed);
+    const startedAt=s.reviewStartedAt, dur=reviewTime;
+    const calcRem=()=>Math.max(0,dur-Math.floor((serverNow()-(startedAt||serverNow()))/1000));
     stTmrIv=setInterval(async ()=>{
-      rem--;
-      if(rem<=0){
+      if(calcRem()<=0){
         clearInterval(stTmrIv);
         const cur=(await get(ref(db,'quiz/status'))).val();
         if(cur==='review') adminNextQ();
       }
-    },1000);
+    },500);
   } else if(!['active','review'].includes(s.status)){
     clearInterval(stTmrIv); stLastSt=s.status;
   }
