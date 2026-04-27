@@ -815,10 +815,19 @@ const fbApp = initializeApp(FB);
 const db    = getDatabase(fbApp);
 
 // ── Clock sync: correct client/server time drift ──────────────────────
-// Firebase provides the offset between client clock and server clock.
-// serverNow() gives the client's best estimate of the server's current time.
 let _timeOffset = 0;
-onValue(ref(db, '.info/serverTimeOffset'), snap => { _timeOffset = snap.val() || 0; });
+let _offsetReady = false;
+let _offsetReadyCbs = [];
+const onOffsetReady = (cb) => _offsetReady ? cb() : _offsetReadyCbs.push(cb);
+
+onValue(ref(db, '.info/serverTimeOffset'), snap => {
+  _timeOffset = snap.val() || 0;
+  if(!_offsetReady){
+    _offsetReady = true;
+    _offsetReadyCbs.forEach(cb => cb());
+    _offsetReadyCbs = [];
+  }
+});
 const serverNow = () => Date.now() + _timeOffset;
 
 const L=['A','B','C','D'], M=['🥇','🥈','🥉'];
@@ -910,8 +919,10 @@ function renderQ(s){
   document.getElementById('q-lbl').textContent=`Питання ${qi+1} / ${Q.length}`;
   document.getElementById('q-prog').style.width=`${(qi+1)/Q.length*100}%`;
   document.getElementById('q-txt').textContent=q.text;
-  // Hide waiting label
-  const wl=document.getElementById('q-waiting-lbl'); if(wl)wl.style.display='none';
+  // Reset waiting label
+  const wl=document.getElementById('q-waiting-lbl');
+  const sp=wl?.querySelector('span');
+  if(wl){ wl.style.display='none'; if(sp) sp.textContent=''; }
   const img=document.getElementById('q-img'); img.src=q.img||''; img.alt=q.text;
   const grid=document.getElementById('q-grid'); grid.innerHTML='';
   q.a.forEach((ans,i)=>{ const b=document.createElement('button'); b.className='ans-btn'; b.setAttribute('data-c',i); b.innerHTML=`<div class="ans-letter">${L[i]}</div><div class="ans-text">${esc(ans)}</div>`; b.onclick=()=>pick(i,q,qi); grid.appendChild(b); });
@@ -923,43 +934,29 @@ function renderQ(s){
     rem--;
     if(rem<=0){
       clearInterval(plyrTmrIv);
-      // ── Locally reveal correct answer immediately ──
-      localRevealCorrect(q, qi);
+      // Timer expired: reveal correct answer locally, then wait for Firebase status=review
+      revealAnswerLocally(q);
       return;
     }
     tickPlayer(rem);
   },1000);
 }
 
-// Show correct answer on player screen without waiting for Firebase
-function localRevealCorrect(q, qi){
-  if(myAns !== null) return; // player already answered — already styled
+// Show correct answer when local timer hits 0 — NO local countdown, Firebase drives the next step
+function revealAnswerLocally(q){
+  // Disable buttons and highlight correct answer
   document.querySelectorAll('.ans-btn').forEach((b,bi)=>{
     b.disabled=true;
     if(bi===q.c) b.classList.add('correct');
+    else if(bi===myAns && myAns!==q.c) b.classList.add('wrong');
     else b.classList.add('dim');
   });
-  // Review countdown
-  let rev=reviewTime;
-  tickPlayerReview(rev);
+  // Show simple waiting indicator (no countdown)
   const wl=document.getElementById('q-waiting-lbl');
   const sp=wl?.querySelector('span');
-  if(wl){ wl.style.display='flex'; if(sp)sp.textContent=`Наступне питання через ${rev}с`; }
-  plyrTmrIv=setInterval(()=>{
-    rev--;
-    if(rev<0){ clearInterval(plyrTmrIv); return; }
-    tickPlayerReview(rev);
-    if(sp) sp.textContent=rev>0?`Наступне питання через ${rev}с`:'Завантаження...';
-  },1000);
-}
-function tickPlayerReview(s){
-  if(s<0)s=0;
-  const C=125.7, r=s/reviewTime;
-  const fg=document.getElementById('pt-fg');
-  fg.style.strokeDashoffset=C*(1-r);
-  fg.style.stroke='var(--cb)';
-  document.getElementById('pt-num').textContent=s;
-  document.getElementById('pt-num').style.color='var(--cb)';
+  if(wl){ wl.style.display='flex'; if(sp) sp.textContent='Очікуємо результати...'; }
+  // Timer ring shows 0
+  tickPlayer(0);
 }
 function tickPlayer(s){
   if(s<0)s=0;
@@ -971,6 +968,7 @@ function tickPlayer(s){
 }
 function pick(i,q,qi){
   if(myAns!==null)return; myAns=i;
+  clearInterval(plyrTmrIv); // stop timer, waiting for Firebase
   document.querySelectorAll('.ans-btn').forEach(b=>b.disabled=true);
   const ok=i===q.c;
   const elapsed=(serverNow()-(qstate?.questionStartedAt||serverNow()))/1000;
@@ -978,7 +976,13 @@ function pick(i,q,qi){
   const pts=ok?Math.max(100,Math.round(1000*ratio)):0;
   myScore+=pts; if(ok)myStars++;
   myLog[`q${qi}`]={answer:i,correct:ok,points:pts};
+  // Show correct/wrong visually
   document.querySelectorAll('.ans-btn').forEach((b,bi)=>{ if(bi===q.c)b.classList.add('correct'); else if(bi===i&&!ok)b.classList.add('wrong'); else b.classList.add('dim'); });
+  // Show waiting indicator
+  const wl=document.getElementById('q-waiting-lbl');
+  const sp=wl?.querySelector('span');
+  if(wl){ wl.style.display='flex'; if(sp) sp.textContent='Очікуємо результати...'; }
+  // Keep timer ring at current position (don't reset to 0)
   update(ref(db,`quiz/players/${myId}`),{score:myScore,stars:myStars,[`answers/q${qi}`]:{answer:i,correct:ok,points:pts}});
   setHud();
 }
@@ -1298,8 +1302,10 @@ function renderStLb(players){
 
 // Admin actions
 window.adminStart=async()=>{
-  projLastSt=''; projLastQ=-1; stLastSt='';
-  await update(ref(db,'quiz'),{status:'active',currentQuestion:0,questionStartedAt:serverTimestamp(),timePerQuestion:adminTime,reviewTime});
+  onOffsetReady(async ()=>{
+    projLastSt=''; projLastQ=-1; stLastSt='';
+    await update(ref(db,'quiz'),{status:'active',currentQuestion:0,questionStartedAt:serverTimestamp(),timePerQuestion:adminTime,reviewTime});
+  });
 };
 // Same action available from projector Start button
 window.projAdminStart = ()=>adminStart();
