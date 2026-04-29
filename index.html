@@ -1366,10 +1366,17 @@ async function adminNextQ(){
 }
 window.adminNextManual=()=>adminNextQ();
 window.adminReset=async()=>{
-  if(!confirm('Скинути весь квіз та всіх гравців?'))return;
+  if(!confirm('Скинути гравців та результати? Питання і таймери збережуться.'))return;
   clearInterval(projTmrIv); clearInterval(stTmrIv);
   projLastSt=''; projLastQ=-1; stLastSt='';
-  await set(ref(db,'quiz'),{status:'waiting',currentQuestion:0});
+  // Use update (not set) so questionBank, timePerQuestion, reviewTime are preserved
+  await update(ref(db,'quiz'),{
+    status:'waiting',
+    currentQuestion:0,
+    players:null,
+    questionStartedAt:null,
+    reviewStartedAt:null
+  });
 };
 
 // Settings also handles auto-advance (when projector triggers it)
@@ -1419,13 +1426,13 @@ window.edDelete=async i=>{ if(!confirm(`Видалити питання ${i+1}?`
   if(isSettings){
     document.getElementById('settings-view').classList.add('on');
     document.getElementById('player-view').style.display='none';
-    if(!(await get(ref(db,'quiz/status'))).exists()) await set(ref(db,'quiz'),{status:'waiting',currentQuestion:0});
+    if(!(await get(ref(db,'quiz/status'))).exists()) await update(ref(db,'quiz'),{status:'waiting',currentQuestion:0});
     listenSettings(); return;
   }
   if(isAdmin){
     document.getElementById('proj-view').classList.add('on');
     document.getElementById('player-view').style.display='none';
-    if(!(await get(ref(db,'quiz/status'))).exists()) await set(ref(db,'quiz'),{status:'waiting',currentQuestion:0});
+    if(!(await get(ref(db,'quiz/status'))).exists()) await update(ref(db,'quiz'),{status:'waiting',currentQuestion:0});
 
     // Generate QR code pointing to player URL
     const playerUrl = location.origin + location.pathname;
