@@ -765,7 +765,10 @@
   <div class="ed-body">
     <div class="ed-toolbar">
       <div class="ed-count" id="ed-count">Завантаження...</div>
-      <button class="st-btn st-btn-start" style="width:auto;padding:9px 18px" onclick="edOpenNew()">+ Додати питання</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="st-btn" style="width:auto;padding:9px 14px;background:transparent;border:1.5px solid var(--brd2);color:var(--ink2);font-size:.78rem" onclick="edRestoreDefaults()" title="Замінити всі питання дефолтним набором">↺ Дефолтні</button>
+        <button class="st-btn st-btn-start" style="width:auto;padding:9px 18px" onclick="edOpenNew()">+ Додати питання</button>
+      </div>
     </div>
     <div class="ed-list" id="ed-list"></div>
   </div>
@@ -785,9 +788,10 @@
       <div class="ed-answer-row"><div class="ed-letter-badge l2">C</div><input type="text" id="ed-a2" placeholder="Варіант C"><input type="radio" name="ed-correct" value="2" class="ed-correct-radio"></div>
       <div class="ed-answer-row"><div class="ed-letter-badge l3">D</div><input type="text" id="ed-a3" placeholder="Варіант D"><input type="radio" name="ed-correct" value="3" class="ed-correct-radio"></div>
       <div class="error-msg" id="ed-err"></div>
+      <div id="ed-save-status" style="font-size:.78rem;text-align:center;min-height:18px;font-weight:600;margin-bottom:4px"></div>
       <div class="ed-actions">
-        <button class="btn btn-dark" onclick="edSave()" style="flex:1">Зберегти</button>
         <button class="btn btn-outline" onclick="edClose()" style="flex:1;margin-top:0">Скасувати</button>
+        <button class="btn btn-dark" onclick="edSave()" style="flex:2" id="ed-save-btn">💾 Зберегти питання</button>
       </div>
     </div>
   </div>
@@ -852,10 +856,70 @@ const isEditor  = params.has('editor');
 const isPlayer  = !isAdmin && !isSettings && !isEditor;
 
 let Q = [];
+
+// Validate a single question — must have all required fields
+function isValidQ(q){
+  return q && typeof q==='object'
+    && typeof q.text==='string' && q.text.trim().length>0
+    && Array.isArray(q.a) && q.a.length===4 && q.a.every(x=>typeof x==='string')
+    && typeof q.c==='number' && q.c>=0 && q.c<=3;
+}
+// Normalize Firebase response to a clean array of valid questions
+function normalizeQ(v){
+  if(!v) return [];
+  let arr;
+  if(Array.isArray(v)) arr=v;
+  else {
+    // Object with numeric keys — restore order by numeric key
+    arr = Object.keys(v)
+      .map(k=>({k:parseInt(k,10), v:v[k]}))
+      .filter(x=>!isNaN(x.k))
+      .sort((a,b)=>a.k-b.k)
+      .map(x=>x.v);
+  }
+  // Filter out any malformed entries — never silently lose them in production though
+  return arr.filter(isValidQ);
+}
+
 async function loadQ(){
   const snap = await get(ref(db,'quiz/questionBank'));
-  if(snap.exists()){ const v=snap.val(); Q=Array.isArray(v)?v:Object.values(v); }
-  else { Q=QUESTIONS_DEFAULT; await set(ref(db,'quiz/questionBank'),Q); }
+  let firebaseQ = [];
+  if(snap.exists()) firebaseQ = normalizeQ(snap.val());
+
+  // Try localStorage backup as fallback
+  let localQ = [];
+  try {
+    const raw = localStorage.getItem('quiz_qbank_backup');
+    if(raw) localQ = normalizeQ(JSON.parse(raw));
+  } catch(e) {}
+
+  if(firebaseQ.length > 0){
+    // Firebase has valid data — use it, and update localStorage backup
+    Q = firebaseQ;
+    try { localStorage.setItem('quiz_qbank_backup', JSON.stringify(Q)); } catch(e) {}
+  } else if(localQ.length > 0){
+    // Firebase empty/missing but local backup exists — restore from backup
+    Q = localQ;
+    await set(ref(db,'quiz/questionBank'), Q);
+    console.warn('Restored questions from localStorage backup');
+  } else {
+    // No Firebase, no backup — first ever run, seed defaults
+    Q = QUESTIONS_DEFAULT;
+    await set(ref(db,'quiz/questionBank'), Q);
+    try { localStorage.setItem('quiz_qbank_backup', JSON.stringify(Q)); } catch(e) {}
+  }
+}
+
+// Safely write Q to Firebase + localStorage backup
+async function persistQ(){
+  // Validate before writing — never write garbage
+  const clean = Q.filter(isValidQ);
+  if(clean.length === 0){
+    throw new Error('Refusing to save: question bank would be empty');
+  }
+  Q = clean;
+  await set(ref(db,'quiz/questionBank'), Q);
+  try { localStorage.setItem('quiz_qbank_backup', JSON.stringify(Q)); } catch(e) {}
 }
 
 // ─── Shared state ────────────────────────────
@@ -1414,8 +1478,8 @@ function renderEdList(){
   const list=document.getElementById('ed-list'); list.innerHTML='';
   Q.forEach((q,i)=>{ const item=document.createElement('div'); item.className='ed-item'; item.innerHTML=`<div class="ed-item-num">${i+1}</div><div class="ed-item-body"><div class="ed-item-text">${esc(q.text)}</div><div class="ed-item-correct">✓ ${esc(q.a[q.c])}</div></div><div class="ed-item-actions"><button class="ed-btn" onclick="edOpenEdit(${i})">✏️ Редагувати</button><button class="ed-btn ed-btn-del" onclick="edDelete(${i})">🗑 Видалити</button></div>`; list.appendChild(item); });
 }
-window.edOpenNew=()=>{ edEditIdx=-1; document.getElementById('ed-modal-title').textContent='Нове питання'; document.getElementById('ed-text').value=''; document.getElementById('ed-img').value=''; document.getElementById('ed-img-preview').style.display='none'; ['ed-a0','ed-a1','ed-a2','ed-a3'].forEach(id=>document.getElementById(id).value=''); document.querySelectorAll('input[name=ed-correct]').forEach(r=>r.checked=false); document.getElementById('ed-err').textContent=''; document.getElementById('ed-modal').classList.add('on'); };
-window.edOpenEdit=i=>{ edEditIdx=i; const q=Q[i]; document.getElementById('ed-modal-title').textContent=`Питання ${i+1}`; document.getElementById('ed-text').value=q.text||''; document.getElementById('ed-img').value=q.img||''; if(q.img){document.getElementById('ed-img-preview').src=q.img;document.getElementById('ed-img-preview').style.display='block';}else{document.getElementById('ed-img-preview').style.display='none';} q.a.forEach((ans,ai)=>document.getElementById(`ed-a${ai}`).value=ans||''); document.querySelectorAll('input[name=ed-correct]').forEach(r=>r.checked=parseInt(r.value)===q.c); document.getElementById('ed-err').textContent=''; document.getElementById('ed-modal').classList.add('on'); };
+window.edOpenNew=()=>{ edEditIdx=-1; document.getElementById('ed-modal-title').textContent='Нове питання'; document.getElementById('ed-text').value=''; document.getElementById('ed-img').value=''; document.getElementById('ed-img-preview').style.display='none'; ['ed-a0','ed-a1','ed-a2','ed-a3'].forEach(id=>document.getElementById(id).value=''); document.querySelectorAll('input[name=ed-correct]').forEach(r=>r.checked=false); document.getElementById('ed-err').textContent=''; const ss=document.getElementById('ed-save-status'); if(ss)ss.textContent=''; const sb=document.getElementById('ed-save-btn'); if(sb){sb.disabled=false; sb.textContent='💾 Зберегти питання'; sb.style.background='';} document.getElementById('ed-modal').classList.add('on'); };
+window.edOpenEdit=i=>{ edEditIdx=i; const q=Q[i]; document.getElementById('ed-modal-title').textContent=`Питання ${i+1}`; document.getElementById('ed-text').value=q.text||''; document.getElementById('ed-img').value=q.img||''; if(q.img){document.getElementById('ed-img-preview').src=q.img;document.getElementById('ed-img-preview').style.display='block';}else{document.getElementById('ed-img-preview').style.display='none';} q.a.forEach((ans,ai)=>document.getElementById(`ed-a${ai}`).value=ans||''); document.querySelectorAll('input[name=ed-correct]').forEach(r=>r.checked=parseInt(r.value)===q.c); document.getElementById('ed-err').textContent=''; const ss=document.getElementById('ed-save-status'); if(ss)ss.textContent=''; const sb=document.getElementById('ed-save-btn'); if(sb){sb.disabled=false; sb.textContent='💾 Зберегти питання'; sb.style.background='';} document.getElementById('ed-modal').classList.add('on'); };
 window.edClose=()=>document.getElementById('ed-modal').classList.remove('on');
 document.getElementById('ed-img').addEventListener('input',e=>{ const url=e.target.value.trim(); const p=document.getElementById('ed-img-preview'); if(url){p.src=url;p.style.display='block';p.onerror=()=>{p.style.display='none';};}else{p.style.display='none';} });
 window.edSave=async()=>{
@@ -1430,13 +1494,39 @@ window.edSave=async()=>{
   const a=[0,1,2,3].map(i=>document.getElementById(`ed-a${i}`).value.trim());
   const cr=document.querySelector('input[name=ed-correct]:checked');
   const err=document.getElementById('ed-err');
+  const status=document.getElementById('ed-save-status');
+  const btn=document.getElementById('ed-save-btn');
+  err.textContent=''; status.textContent='';
   if(!text){err.textContent='Введи текст питання';return;}
   if(a.some(v=>!v)){err.textContent='Заповни всі 4 варіанти';return;}
   if(!cr){err.textContent='Вибери правильну відповідь';return;}
+
+  // Saving state
+  btn.disabled=true; btn.textContent='⏳ Зберігаємо...';
+  status.textContent=''; status.style.color='var(--ink3)';
+
   const q={text,img,a,c:parseInt(cr.value)};
   if(edEditIdx===-1)Q.push(q); else Q[edEditIdx]=q;
-  await set(ref(db,'quiz/questionBank'),Q);
-  renderEdList(); edClose();
+
+  try {
+    await persistQ();
+    // Success state — show confirmation and close after brief delay
+    status.textContent='✓ Збережено в базу';
+    status.style.color='var(--cd)';
+    btn.textContent='✓ Збережено!';
+    btn.style.background='var(--cd)';
+    renderEdList();
+    setTimeout(()=>{
+      btn.disabled=false;
+      btn.textContent='💾 Зберегти питання';
+      btn.style.background='';
+      edClose();
+    }, 900);
+  } catch(e){
+    err.textContent='Помилка збереження: '+e.message;
+    btn.disabled=false; btn.textContent='💾 Зберегти питання';
+    status.textContent='';
+  }
 };
 window.edDelete=async i=>{
   const qs=(await get(ref(db,'quiz/status'))).val();
@@ -1445,7 +1535,22 @@ window.edDelete=async i=>{
     return;
   }
   if(!confirm(`Видалити питання ${i+1}?`))return;
-  Q.splice(i,1); await set(ref(db,'quiz/questionBank'),Q); renderEdList();
+  if(Q.length<=1){ alert('Не можна видалити останнє питання. Залиш хоча б одне.'); return; }
+  Q.splice(i,1);
+  try { await persistQ(); } catch(e){ alert('Помилка збереження: '+e.message); return; }
+  renderEdList();
+};
+
+window.edRestoreDefaults=async()=>{
+  const qs=(await get(ref(db,'quiz/status'))).val();
+  if(['active','review','leaderboard'].includes(qs)){
+    alert('Не можна відновлювати під час квізу. Скинь квіз спочатку.');
+    return;
+  }
+  if(!confirm('Замінити всі поточні питання дефолтним набором? Поточні питання будуть втрачені.'))return;
+  Q = JSON.parse(JSON.stringify(QUESTIONS_DEFAULT));
+  try { await persistQ(); } catch(e){ alert('Помилка: '+e.message); return; }
+  renderEdList();
 };
 
 // ════════════════════════════════
@@ -1461,9 +1566,14 @@ window.edDelete=async i=>{
     // Live sync: re-render list if another instance edits questions
     onValue(ref(db,'quiz/questionBank'),snap=>{
       if(!snap.exists())return;
-      const v=snap.val();
-      Q=Array.isArray(v)?v:Object.values(v);
-      renderEdList();
+      const normalized = normalizeQ(snap.val());
+      if(normalized.length === 0) return; // protect against broken data
+      // Only update if data actually differs (avoid resetting open modal)
+      if(JSON.stringify(normalized) !== JSON.stringify(Q)){
+        Q = normalized;
+        try { localStorage.setItem('quiz_qbank_backup', JSON.stringify(Q)); } catch(e) {}
+        renderEdList();
+      }
     });
     return;
   }
